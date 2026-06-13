@@ -1,5 +1,8 @@
 <template>
-  <div class="layout" :class="{ 'sidebar-open': sidebarOuverte }">
+  <!-- Page login : pas de sidebar -->
+  <router-view v-if="$route.meta.public" />
+
+  <div v-else class="layout" :class="{ 'sidebar-open': sidebarOuverte }">
 
     <!-- Overlay mobile (clic pour fermer) -->
     <div class="sidebar-overlay" @click="sidebarOuverte = false"></div>
@@ -60,24 +63,35 @@
           <span>Produits</span>
         </router-link>
 
-        <p class="nav-section-label">Administration</p>
-        <router-link to="/utilisateurs" class="nav-item" @click="sidebarOuverte = false">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
-            <circle cx="9" cy="7" r="4" stroke="currentColor" stroke-width="1.8"/>
-            <path d="M3 21v-2a4 4 0 014-4h4a4 4 0 014 4v2" stroke="currentColor" stroke-width="1.8"/>
-            <path d="M16 3.13a4 4 0 010 7.75M21 21v-2a4 4 0 00-3-3.85" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
-          </svg>
-          <span>Utilisateurs</span>
-        </router-link>
+        <!-- Section Admin : visible seulement pour ADMIN -->
+        <template v-if="auth.aRole('ADMIN')">
+          <p class="nav-section-label">Administration</p>
+          <router-link to="/utilisateurs" class="nav-item" @click="sidebarOuverte = false">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+              <circle cx="9" cy="7" r="4" stroke="currentColor" stroke-width="1.8"/>
+              <path d="M3 21v-2a4 4 0 014-4h4a4 4 0 014 4v2" stroke="currentColor" stroke-width="1.8"/>
+              <path d="M16 3.13a4 4 0 010 7.75M21 21v-2a4 4 0 00-3-3.85" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+            </svg>
+            <span>Utilisateurs</span>
+          </router-link>
+        </template>
       </nav>
 
       <div class="sidebar-footer">
         <div class="user-info">
-          <div class="user-avatar">A</div>
-          <div>
-            <p class="user-name">Administrateur</p>
-            <p class="user-role">ADMIN</p>
+          <div class="user-avatar">{{ initiales }}</div>
+          <div style="flex:1;min-width:0;">
+            <p class="user-name">{{ auth.user?.nomComplet }}</p>
+            <p class="user-role">{{ auth.user?.roles?.[0] }}</p>
           </div>
+          <!-- Bouton déconnexion -->
+          <button class="logout-btn" @click="deconnecter" title="Déconnexion">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+              <path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+              <polyline points="16 17 21 12 16 7" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+              <line x1="21" y1="12" x2="9" y2="12" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+            </svg>
+          </button>
         </div>
       </div>
     </aside>
@@ -102,13 +116,17 @@
       </main>
     </div>
   </div>
+
+  <!-- Fin du template conditionnel -->
 </template>
 
 <script>
+import { authStore } from './services/authStore.js'
+
 export default {
   name: 'App',
   data() {
-    return { sidebarOuverte: false }
+    return { sidebarOuverte: false, auth: authStore }
   },
   computed: {
     titreRoute() {
@@ -120,6 +138,17 @@ export default {
         '/utilisateurs': 'Utilisateurs'
       }
       return titres[this.$route.path] || 'StockMaster'
+    },
+    // Initiales de l'utilisateur connecté pour l'avatar
+    initiales() {
+      const nom = this.auth.user?.nomComplet || ''
+      return nom.split(' ').map(n => n[0]).slice(0, 2).join('').toUpperCase() || '?'
+    }
+  },
+  methods: {
+    deconnecter() {
+      authStore.logout()
+      this.$router.push('/login')
     }
   }
 }
@@ -285,6 +314,21 @@ body {
 }
 .user-name { font-size: .82rem; font-weight: 600; color: #fff; }
 .user-role { font-size: .72rem; color: rgba(255,255,255,.45); margin-top: 1px; }
+
+/* Bouton déconnexion dans le footer sidebar */
+.logout-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: rgba(255,255,255,.4);
+  padding: 6px;
+  border-radius: var(--radius-sm);
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+  transition: color .15s, background .15s;
+}
+.logout-btn:hover { color: #fff; background: rgba(220,38,38,.3); }
 
 /* Overlay mobile */
 .sidebar-overlay {

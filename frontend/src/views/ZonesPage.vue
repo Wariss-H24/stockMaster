@@ -14,7 +14,7 @@
           </svg>
           <input v-model="recherche" placeholder="Rechercher une zone..." />
         </div>
-        <button class="btn btn-primary" @click="ouvrirModal()">
+        <button v-if="peutEcrire" class="btn btn-primary" @click="ouvrirModal()">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
             <path d="M12 5v14M5 12h14" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/>
           </svg>
@@ -27,7 +27,7 @@
           <thead>
             <tr>
               <th>Zone</th><th>Entrepôt</th><th>Occupation</th><th>Capacité</th><th>Statut</th>
-              <th style="text-align:right;">Actions</th>
+              <th v-if="peutEcrire || peutSupprimer" style="text-align:right;">Actions</th>
             </tr>
           </thead>
           <tbody>
@@ -57,16 +57,16 @@
                   {{ z.actif ? 'Actif' : 'Inactif' }}
                 </span>
               </td>
-              <td style="text-align:right;">
+              <td v-if="peutEcrire || peutSupprimer" style="text-align:right;">
                 <div style="display:flex;gap:6px;justify-content:flex-end;">
-                  <button class="btn btn-outline btn-sm" @click="ouvrirModal(z)">
+                  <button v-if="peutEcrire" class="btn btn-outline btn-sm" @click="ouvrirModal(z)">
                     <svg width="13" height="13" viewBox="0 0 24 24" fill="none">
                       <path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7" stroke="currentColor" stroke-width="1.8"/>
                       <path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z" stroke="currentColor" stroke-width="1.8"/>
                     </svg>
                     Éditer
                   </button>
-                  <button class="btn btn-danger btn-sm" @click="desactiver(z.id)">
+                  <button v-if="peutSupprimer && z.actif" class="btn btn-danger btn-sm" @click="demanderDesactivation(z)">
                     <svg width="13" height="13" viewBox="0 0 24 24" fill="none">
                       <circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="1.8"/>
                       <path d="M15 9l-6 6M9 9l6 6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
@@ -81,7 +81,7 @@
       </div>
     </div>
 
-    <!-- Modal -->
+    <!-- Modal formulaire -->
     <div class="modal-overlay" v-if="modal" @click.self="modal = false">
       <div class="modal">
         <div class="modal-header">
@@ -122,21 +122,38 @@
         </div>
       </div>
     </div>
+
+    <!-- Modale de confirmation désactivation -->
+    <ConfirmModal
+      v-if="confirm.visible"
+      titre="Désactiver la zone"
+      :message="`Voulez-vous désactiver « ${confirm.cible?.nom} » ? Elle ne sera plus visible dans les listes actives.`"
+      type="warning"
+      label-confirmer="Désactiver"
+      @confirmer="confirmerDesactivation"
+      @annuler="confirm.visible = false"
+    />
   </div>
 </template>
 
 <script>
 import { zoneApi, entrepotApi } from '../services/api.js'
+import { authStore } from '../services/authStore.js'
+import ConfirmModal from '../components/ConfirmModal.vue'
 
 export default {
   name: 'ZonesPage',
+  components: { ConfirmModal },
   data() {
     return {
       liste: [], entrepots: [], chargement: true, modal: false, erreur: '', recherche: '',
+      confirm: { visible: false, cible: null },
       form: { id: null, nom: '', entrepotId: '', capaciteTotale: 0, capaciteUtilisee: 0 }
     }
   },
   computed: {
+    peutEcrire()    { return authStore.aUnRole('ADMIN', 'GESTIONNAIRE') },
+    peutSupprimer() { return authStore.aRole('ADMIN') },
     listeFiltree() {
       const q = this.recherche.toLowerCase()
       if (!q) return this.liste
@@ -170,9 +187,12 @@ export default {
         this.erreur = e.response?.data?.message || 'Erreur lors de la sauvegarde.'
       }
     },
-    async desactiver(id) {
-      if (!confirm('Désactiver cette zone ?')) return
-      await zoneApi.desactiver(id)
+    demanderDesactivation(z) {
+      this.confirm = { visible: true, cible: z }
+    },
+    async confirmerDesactivation() {
+      await zoneApi.desactiver(this.confirm.cible.id)
+      this.confirm = { visible: false, cible: null }
       const r = await zoneApi.findAll(); this.liste = r.data
     }
   }

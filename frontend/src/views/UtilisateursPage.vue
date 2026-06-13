@@ -14,6 +14,7 @@
           </svg>
           <input v-model="recherche" placeholder="Nom, username..." />
         </div>
+        <!-- Page uniquement ADMIN → bouton toujours visible ici -->
         <button class="btn btn-primary" @click="ouvrirModal()">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
             <path d="M12 5v14M5 12h14" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/>
@@ -40,7 +41,6 @@
             <tr v-for="u in listeFiltree" :key="u.id">
               <td>
                 <div style="display:flex;align-items:center;gap:10px;">
-                  <!-- Avatar initiales -->
                   <div style="width:36px;height:36px;border-radius:50%;background:var(--navy-xlight);color:var(--navy);display:flex;align-items:center;justify-content:center;font-weight:700;font-size:.85rem;flex-shrink:0;">
                     {{ initiales(u.nomComplet) }}
                   </div>
@@ -66,7 +66,12 @@
                     </svg>
                     Éditer
                   </button>
-                  <button class="btn btn-danger btn-sm" @click="desactiver(u.id)">
+                  <!-- Ne pas pouvoir se désactiver soi-même -->
+                  <button
+                    v-if="u.actif && u.username !== moi"
+                    class="btn btn-danger btn-sm"
+                    @click="demanderDesactivation(u)"
+                  >
                     <svg width="13" height="13" viewBox="0 0 24 24" fill="none">
                       <circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="1.8"/>
                       <path d="M15 9l-6 6M9 9l6 6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
@@ -81,7 +86,7 @@
       </div>
     </div>
 
-    <!-- Modal -->
+    <!-- Modal formulaire -->
     <div class="modal-overlay" v-if="modal" @click.self="modal = false">
       <div class="modal">
         <div class="modal-header">
@@ -129,34 +134,48 @@
         </div>
       </div>
     </div>
+
+    <!-- Modale de confirmation désactivation -->
+    <ConfirmModal
+      v-if="confirm.visible"
+      titre="Désactiver l'utilisateur"
+      :message="`Voulez-vous désactiver le compte de « ${confirm.cible?.nomComplet} » (@${confirm.cible?.username}) ? Il ne pourra plus se connecter.`"
+      type="warning"
+      label-confirmer="Désactiver"
+      @confirmer="confirmerDesactivation"
+      @annuler="confirm.visible = false"
+    />
   </div>
 </template>
 
 <script>
 import { utilisateurApi } from '../services/api.js'
+import { authStore } from '../services/authStore.js'
+import ConfirmModal from '../components/ConfirmModal.vue'
 
 export default {
   name: 'UtilisateursPage',
+  components: { ConfirmModal },
   data() {
     return {
       liste: [], chargement: true, modal: false, erreur: '',
       recherche: '', roleSelectionne: '',
+      confirm: { visible: false, cible: null },
       rolesDisponibles: ['ADMIN', 'GESTIONNAIRE', 'MAGASINIER', 'AUDITEUR'],
       form: { id: null, nomComplet: '', username: '', motDePasse: '', actif: true, roles: [] }
     }
   },
   computed: {
+    // Username de l'utilisateur connecté (pour empêcher l'auto-désactivation)
+    moi() { return authStore.user?.username },
     listeFiltree() {
       const q = this.recherche.toLowerCase()
       if (!q) return this.liste
       return this.liste.filter(u => u.nomComplet?.toLowerCase().includes(q) || u.username?.toLowerCase().includes(q))
     }
   },
-  async mounted() {
-    await this.charger()
-  },
+  async mounted() { await this.charger() },
   methods: {
-    // Génère les initiales depuis le nom complet
     initiales(nom) {
       if (!nom) return '?'
       return nom.split(' ').map(n => n[0]).slice(0, 2).join('').toUpperCase()
@@ -176,19 +195,56 @@ export default {
     },
     async sauvegarder() {
       this.erreur = ''
-      const payload = { ...this.form, roles: this.roleSelectionne ? [this.roleSelectionne] : [] }
+
+      // Validation : mot de passe obligatoire à la création
+      if (!this.form.id && !this.form.motDePasse.trim()) {
+        this.erreur = 'Le mot de passe est obligatoire pour un nouvel utilisateur'
+        return
+      }
+      if (!this.form.username.trim()) {
+        this.erreur = 'Le nom d\'utilisateur est obligatoire'
+        return
+      }
+      if (!this.form.nomComplet.trim()) {
+        this.erreur = 'Le nom complet est obligatoire'
+        return
+      }
+
+      // Construction du payload — ne pas envoyer motDePasse vide en modification
+      const payload = {
+        nomComplet: this.form.nomComplet.trim(),
+        username:   this.form.username.trim(),
+        actif:      this.form.actif,
+        roles:      this.roleSelectionne ? [this.roleSelectionne] : []
+      }
+      // Inclure le mot de passe seulement s'il est rempli
+      if (this.form.motDePasse.trim()) {
+        payload.motDePasse = this.form.motDePasse
+      }
+
+      console.log('[UTILISATEUR] Payload envoyé:', JSON.stringify(payload))
+
       try {
         if (this.form.id) await utilisateurApi.modifier(this.form.id, payload)
         else await utilisateurApi.creer(payload)
         this.modal = false
         this.charger()
       } catch (e) {
-        this.erreur = e.response?.data?.message || 'Erreur lors de la sauvegarde.'
+        console.error('[UTILISATEUR] Erreur:', JSON.stringify(e.response?.data))
+        const data = e.response?.data
+        if (data?.erreurs) {
+          this.erreur = Object.values(data.erreurs).join(' — ')
+        } else {
+          this.erreur = data?.message || 'Erreur lors de la sauvegarde.'
+        }
       }
     },
-    async desactiver(id) {
-      if (!confirm('Désactiver cet utilisateur ?')) return
-      await utilisateurApi.desactiver(id)
+    demanderDesactivation(u) {
+      this.confirm = { visible: true, cible: u }
+    },
+    async confirmerDesactivation() {
+      await utilisateurApi.desactiver(this.confirm.cible.id)
+      this.confirm = { visible: false, cible: null }
       this.charger()
     }
   }

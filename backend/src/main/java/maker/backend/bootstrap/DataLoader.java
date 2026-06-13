@@ -5,6 +5,7 @@ import maker.backend.repository.*;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.security.crypto.password.PasswordEncoder;
 
 /**
  * Chargement des données initiales au démarrage (seulement si les tables sont vides).
@@ -18,7 +19,8 @@ public class DataLoader {
             UtilisateurRepository userRepo,
             EntrepotRepository entrepotRepo,
             ZoneFrRepository zoneRepo,
-            ProduitRepository produitRepo) {
+            ProduitRepository produitRepo,
+            PasswordEncoder passwordEncoder) {
 
         return args -> {
 
@@ -31,18 +33,26 @@ public class DataLoader {
                 }
             }
 
-            // --- Utilisateur admin par défaut ---
+            // --- Utilisateurs de démonstration (mots de passe hashés BCrypt) ---
             if (userRepo.count() == 0) {
-                Utilisateur admin = new Utilisateur();
-                admin.setUsername("admin");
-                admin.setMotDePasse("admin123"); // À hasher avec BCrypt au module JWT
-                admin.setNomComplet("Administrateur");
-                admin.setActif(true);
-                roleRepo.findByNom("ADMIN").ifPresent(r -> admin.getRoles().add(r));
-                userRepo.save(admin);
+                Object[][] users = {
+                    {"admin",        "admin123",  "Administrateur", "ADMIN"},
+                    {"gestionnaire", "gest123",   "Pierre Martin",  "GESTIONNAIRE"},
+                    {"magasinier",   "mag123",    "Sophie Durand",  "MAGASINIER"},
+                    {"auditeur",     "audit123",  "Marc Leclerc",   "AUDITEUR"},
+                };
+                for (Object[] data : users) {
+                    Utilisateur u = new Utilisateur();
+                    u.setUsername((String) data[0]);
+                    u.setMotDePasse(passwordEncoder.encode((String) data[1]));
+                    u.setNomComplet((String) data[2]);
+                    u.setActif(true);
+                    roleRepo.findByNom((String) data[3]).ifPresent(r -> u.getRoles().add(r));
+                    userRepo.save(u);
+                }
             }
 
-            // --- Entrepôt de démonstration ---
+            // --- Entrepôts de démonstration ---
             if (entrepotRepo.count() == 0) {
                 Entrepot e1 = new Entrepot();
                 e1.setNom("ENT-Paris");
@@ -62,16 +72,16 @@ public class DataLoader {
                 e2.setActif(true);
                 entrepotRepo.save(e2);
 
-                // --- Zones ---
-                String[] nomsZones = {"Zone A - Réception", "Zone B - Stockage", "Zone C - Expédition"};
-                int[] capTotales = {3000, 5000, 2000};
-                int[] capUtilisees = {800, 2400, 0};
+                // Zones rattachées à ENT-Paris
+                String[] nomsZones  = {"Zone A - Réception", "Zone B - Stockage", "Zone C - Expédition"};
+                int[]    capTotales = {3000, 5000, 2000};
+                int[]    capUtil    = {800,  2400, 0};
                 for (int i = 0; i < nomsZones.length; i++) {
                     ZoneFr z = new ZoneFr();
                     z.setNom(nomsZones[i]);
                     z.setEntrepot(e1);
                     z.setCapaciteTotale(capTotales[i]);
-                    z.setCapaciteUtilisee(capUtilisees[i]);
+                    z.setCapaciteUtilisee(capUtil[i]);
                     z.setActif(true);
                     zoneRepo.save(z);
                 }
@@ -80,21 +90,21 @@ public class DataLoader {
             // --- Produits de démonstration ---
             if (produitRepo.count() == 0) {
                 Object[][] produits = {
-                    {"PRD-001", "1234567890123", "Laptop Dell XPS", "Informatique", 800.0, 1200.0, 2.1, 0.003},
-                    {"PRD-002", "9876543210987", "Clavier mécanique", "Informatique", 60.0, 95.0, 0.9, 0.001},
-                    {"PRD-003", "1111222233334", "Réfrigérateur Samsung", "Électroménager", 350.0, 550.0, 45.0, 0.5},
-                    {"PRD-004", "5555666677778", "Filtre à huile VW", "Pièces auto", 8.0, 18.0, 0.3, 0.0002},
+                    {"PRD-001", "1234567890123", "Laptop Dell XPS",       "Informatique",   800.0, 1200.0, 2.1,  0.003},
+                    {"PRD-002", "9876543210987", "Clavier mécanique",     "Informatique",    60.0,   95.0, 0.9,  0.001},
+                    {"PRD-003", "1111222233334", "Réfrigérateur Samsung", "Electroménager", 350.0,  550.0, 45.0, 0.5},
+                    {"PRD-004", "5555666677778", "Filtre à huile VW",     "Pièces auto",      8.0,   18.0, 0.3,  0.0002},
                 };
-                for (Object[] data : produits) {
+                for (Object[] d : produits) {
                     Produit p = new Produit();
-                    p.setReference((String) data[0]);
-                    p.setCodeBarre((String) data[1]);
-                    p.setNom((String) data[2]);
-                    p.setCategorie((String) data[3]);
-                    p.setPrixAchat((Double) data[4]);
-                    p.setPrixVente((Double) data[5]);
-                    p.setPoids((Double) data[6]);
-                    p.setVolume((Double) data[7]);
+                    p.setReference((String) d[0]);
+                    p.setCodeBarre((String) d[1]);
+                    p.setNom((String) d[2]);
+                    p.setCategorie((String) d[3]);
+                    p.setPrixAchat((Double) d[4]);
+                    p.setPrixVente((Double) d[5]);
+                    p.setPoids((Double) d[6]);
+                    p.setVolume((Double) d[7]);
                     p.setSupprime(false);
                     produitRepo.save(p);
                 }

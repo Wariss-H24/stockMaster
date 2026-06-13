@@ -14,7 +14,8 @@
           </svg>
           <input v-model="recherche" placeholder="Rechercher un entrepôt..." />
         </div>
-        <button class="btn btn-primary" @click="ouvrirModal()">
+        <!-- Bouton visible uniquement pour ADMIN et GESTIONNAIRE -->
+        <button v-if="peutEcrire" class="btn btn-primary" @click="ouvrirModal()">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
             <path d="M12 5v14M5 12h14" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/>
           </svg>
@@ -26,12 +27,9 @@
         <table>
           <thead>
             <tr>
-              <th>Nom</th>
-              <th>Adresse</th>
-              <th>Responsable</th>
-              <th>Occupation</th>
-              <th>Statut</th>
-              <th style="text-align:right;">Actions</th>
+              <th>Nom</th><th>Adresse</th><th>Responsable</th>
+              <th>Occupation</th><th>Statut</th>
+              <th v-if="peutEcrire || peutSupprimer" style="text-align:right;">Actions</th>
             </tr>
           </thead>
           <tbody>
@@ -42,9 +40,7 @@
               <td colspan="6" style="text-align:center;padding:32px;color:var(--gray-400);">Aucun entrepôt trouvé.</td>
             </tr>
             <tr v-for="e in listeFiltree" :key="e.id">
-              <td>
-                <span style="font-weight:600;color:var(--gray-900);">{{ e.nom }}</span>
-              </td>
+              <td><span style="font-weight:600;color:var(--gray-900);">{{ e.nom }}</span></td>
               <td style="color:var(--gray-500);font-size:.82rem;">{{ e.adresse }}</td>
               <td>{{ e.responsable || '—' }}</td>
               <td style="min-width:160px;">
@@ -63,16 +59,18 @@
                   {{ e.actif ? 'Actif' : 'Inactif' }}
                 </span>
               </td>
-              <td style="text-align:right;">
+              <td v-if="peutEcrire || peutSupprimer" style="text-align:right;">
                 <div style="display:flex;gap:6px;justify-content:flex-end;">
-                  <button class="btn btn-outline btn-sm" @click="ouvrirModal(e)">
+                  <!-- Éditer : ADMIN + GESTIONNAIRE -->
+                  <button v-if="peutEcrire" class="btn btn-outline btn-sm" @click="ouvrirModal(e)">
                     <svg width="13" height="13" viewBox="0 0 24 24" fill="none">
                       <path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7" stroke="currentColor" stroke-width="1.8"/>
                       <path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z" stroke="currentColor" stroke-width="1.8"/>
                     </svg>
                     Éditer
                   </button>
-                  <button class="btn btn-danger btn-sm" @click="desactiver(e.id)">
+                  <!-- Désactiver : ADMIN seulement -->
+                  <button v-if="peutSupprimer && e.actif" class="btn btn-danger btn-sm" @click="demanderDesactivation(e)">
                     <svg width="13" height="13" viewBox="0 0 24 24" fill="none">
                       <circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="1.8"/>
                       <path d="M15 9l-6 6M9 9l6 6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
@@ -87,7 +85,7 @@
       </div>
     </div>
 
-    <!-- Modal -->
+    <!-- Modal formulaire -->
     <div class="modal-overlay" v-if="modal" @click.self="modal = false">
       <div class="modal">
         <div class="modal-header">
@@ -133,30 +131,51 @@
         </div>
       </div>
     </div>
+
+    <!-- Modale de confirmation désactivation -->
+    <ConfirmModal
+      v-if="confirm.visible"
+      titre="Désactiver l'entrepôt"
+      :message="`Voulez-vous désactiver « ${confirm.cible?.nom} » ? Il ne sera plus visible dans les listes actives.`"
+      type="warning"
+      label-confirmer="Désactiver"
+      @confirmer="confirmerDesactivation"
+      @annuler="confirm.visible = false"
+    />
   </div>
 </template>
 
 <script>
 import { entrepotApi } from '../services/api.js'
+import { authStore } from '../services/authStore.js'
+import ConfirmModal from '../components/ConfirmModal.vue'
 
 export default {
   name: 'EntrepotsPage',
+  components: { ConfirmModal },
   data() {
     return {
       liste: [], chargement: true, modal: false, erreur: '', recherche: '',
+      confirm: { visible: false, cible: null },
       form: { id: null, nom: '', adresse: '', responsable: '', capaciteTotale: 0, capaciteUtilisee: 0, actif: true }
     }
   },
   computed: {
+    // ADMIN + GESTIONNAIRE peuvent créer/modifier
+    peutEcrire()    { return authStore.aUnRole('ADMIN', 'GESTIONNAIRE') },
+    // Seul ADMIN peut désactiver
+    peutSupprimer() { return authStore.aRole('ADMIN') },
     listeFiltree() {
       const q = this.recherche.toLowerCase()
       if (!q) return this.liste
-      return this.liste.filter(e => e.nom?.toLowerCase().includes(q) || e.adresse?.toLowerCase().includes(q) || e.responsable?.toLowerCase().includes(q))
+      return this.liste.filter(e =>
+        e.nom?.toLowerCase().includes(q) ||
+        e.adresse?.toLowerCase().includes(q) ||
+        e.responsable?.toLowerCase().includes(q)
+      )
     }
   },
-  async mounted() {
-    await this.charger()
-  },
+  async mounted() { await this.charger() },
   methods: {
     async charger() {
       this.chargement = true
@@ -179,9 +198,13 @@ export default {
         this.erreur = e.response?.data?.message || 'Erreur lors de la sauvegarde.'
       }
     },
-    async desactiver(id) {
-      if (!confirm('Désactiver cet entrepôt ?')) return
-      await entrepotApi.desactiver(id)
+    // Ouvre la modale de confirmation
+    demanderDesactivation(e) {
+      this.confirm = { visible: true, cible: e }
+    },
+    async confirmerDesactivation() {
+      await entrepotApi.desactiver(this.confirm.cible.id)
+      this.confirm = { visible: false, cible: null }
       this.charger()
     }
   }

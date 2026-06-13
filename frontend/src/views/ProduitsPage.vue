@@ -14,7 +14,7 @@
           </svg>
           <input v-model="recherche" placeholder="Référence, nom, catégorie..." />
         </div>
-        <button class="btn btn-primary" @click="ouvrirModal()">
+        <button v-if="peutEcrire" class="btn btn-primary" @click="ouvrirModal()">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
             <path d="M12 5v14M5 12h14" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/>
           </svg>
@@ -28,7 +28,7 @@
             <tr>
               <th>Référence</th><th>Nom</th><th>Catégorie</th>
               <th>Prix achat</th><th>Prix vente</th><th>Marge</th>
-              <th style="text-align:right;">Actions</th>
+              <th v-if="peutEcrire || peutSupprimer" style="text-align:right;">Actions</th>
             </tr>
           </thead>
           <tbody>
@@ -55,23 +55,22 @@
               <td style="font-size:.875rem;">{{ p.prixAchat != null ? p.prixAchat.toFixed(2) + ' €' : '—' }}</td>
               <td style="font-size:.875rem;font-weight:600;">{{ p.prixVente != null ? p.prixVente.toFixed(2) + ' €' : '—' }}</td>
               <td>
-                <span v-if="p.prixAchat && p.prixVente"
-                  class="badge"
+                <span v-if="p.prixAchat && p.prixVente" class="badge"
                   :class="marge(p) >= 20 ? 'badge-success' : marge(p) >= 10 ? 'badge-warning' : 'badge-danger'">
                   {{ marge(p) }}%
                 </span>
                 <span v-else style="color:var(--gray-400);">—</span>
               </td>
-              <td style="text-align:right;">
+              <td v-if="peutEcrire || peutSupprimer" style="text-align:right;">
                 <div style="display:flex;gap:6px;justify-content:flex-end;">
-                  <button class="btn btn-outline btn-sm" @click="ouvrirModal(p)">
+                  <button v-if="peutEcrire" class="btn btn-outline btn-sm" @click="ouvrirModal(p)">
                     <svg width="13" height="13" viewBox="0 0 24 24" fill="none">
                       <path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7" stroke="currentColor" stroke-width="1.8"/>
                       <path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z" stroke="currentColor" stroke-width="1.8"/>
                     </svg>
                     Éditer
                   </button>
-                  <button class="btn btn-danger btn-sm" @click="supprimer(p.id)">
+                  <button v-if="peutSupprimer" class="btn btn-danger btn-sm" @click="demanderSuppression(p)">
                     <svg width="13" height="13" viewBox="0 0 24 24" fill="none">
                       <polyline points="3 6 5 6 21 6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
                       <path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6" stroke="currentColor" stroke-width="1.8"/>
@@ -87,7 +86,7 @@
       </div>
     </div>
 
-    <!-- Modal -->
+    <!-- Modal formulaire -->
     <div class="modal-overlay" v-if="modal" @click.self="modal = false">
       <div class="modal">
         <div class="modal-header">
@@ -151,21 +150,38 @@
         </div>
       </div>
     </div>
+
+    <!-- Modale de confirmation suppression -->
+    <ConfirmModal
+      v-if="confirm.visible"
+      titre="Supprimer le produit"
+      :message="`Voulez-vous supprimer « ${confirm.cible?.nom} » (réf. ${confirm.cible?.reference}) ? Cette action est irréversible.`"
+      type="danger"
+      label-confirmer="Supprimer"
+      @confirmer="confirmerSuppression"
+      @annuler="confirm.visible = false"
+    />
   </div>
 </template>
 
 <script>
 import { produitApi } from '../services/api.js'
+import { authStore } from '../services/authStore.js'
+import ConfirmModal from '../components/ConfirmModal.vue'
 
 export default {
   name: 'ProduitsPage',
+  components: { ConfirmModal },
   data() {
     return {
       liste: [], chargement: true, modal: false, erreur: '', recherche: '',
+      confirm: { visible: false, cible: null },
       form: { id: null, reference: '', codeBarre: '', nom: '', categorie: '', description: '', prixAchat: null, prixVente: null, poids: null, volume: null }
     }
   },
   computed: {
+    peutEcrire()    { return authStore.aUnRole('ADMIN', 'GESTIONNAIRE') },
+    peutSupprimer() { return authStore.aRole('ADMIN') },
     listeFiltree() {
       const q = this.recherche.toLowerCase()
       if (!q) return this.liste
@@ -176,14 +192,9 @@ export default {
       )
     }
   },
-  async mounted() {
-    await this.charger()
-  },
+  async mounted() { await this.charger() },
   methods: {
-    // Calcul de la marge commerciale en %
-    marge(p) {
-      return Math.round(((p.prixVente - p.prixAchat) / p.prixVente) * 100)
-    },
+    marge(p) { return Math.round(((p.prixVente - p.prixAchat) / p.prixVente) * 100) },
     async charger() {
       this.chargement = true
       try { const r = await produitApi.findAll(); this.liste = r.data }
@@ -205,9 +216,12 @@ export default {
         this.erreur = e.response?.data?.message || 'Erreur lors de la sauvegarde.'
       }
     },
-    async supprimer(id) {
-      if (!confirm('Supprimer ce produit ? (suppression logique, il reste en base)')) return
-      await produitApi.supprimer(id)
+    demanderSuppression(p) {
+      this.confirm = { visible: true, cible: p }
+    },
+    async confirmerSuppression() {
+      await produitApi.supprimer(this.confirm.cible.id)
+      this.confirm = { visible: false, cible: null }
       this.charger()
     }
   }

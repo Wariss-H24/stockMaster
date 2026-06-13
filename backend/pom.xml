@@ -34,10 +34,28 @@
 			<artifactId>spring-boot-starter-validation</artifactId>
 		</dependency>
 
-		<!-- Sécurité (désactivée en dev, prête pour JWT plus tard) -->
+		<!-- Sécurité Spring Security -->
 		<dependency>
 			<groupId>org.springframework.boot</groupId>
 			<artifactId>spring-boot-starter-security</artifactId>
+		</dependency>
+
+		<!-- JWT : génération et validation des tokens -->
+		<!-- jjwt-impl et jjwt-jackson en compile (pas runtime) pour éviter le problème de RestartClassLoader devtools -->
+		<dependency>
+			<groupId>io.jsonwebtoken</groupId>
+			<artifactId>jjwt-api</artifactId>
+			<version>0.11.5</version>
+		</dependency>
+		<dependency>
+			<groupId>io.jsonwebtoken</groupId>
+			<artifactId>jjwt-impl</artifactId>
+			<version>0.11.5</version>
+		</dependency>
+		<dependency>
+			<groupId>io.jsonwebtoken</groupId>
+			<artifactId>jjwt-jackson</artifactId>
+			<version>0.11.5</version>
 		</dependency>
 
 		<!-- Base H2 en mémoire pour le développement -->
@@ -62,13 +80,16 @@
 			<optional>true</optional>
 		</dependency>
 
-		<!-- DevTools : rechargement automatique en développement -->
+		<!-- DevTools désactivé : conflit CGLIB avec RestartClassLoader + JJWT -->
+		<!-- Réactiver si besoin après migration vers Spring Boot 3.3+ -->
+		<!--
 		<dependency>
 			<groupId>org.springframework.boot</groupId>
 			<artifactId>spring-boot-devtools</artifactId>
 			<scope>runtime</scope>
 			<optional>true</optional>
 		</dependency>
+		-->
 
 		<!-- Tests -->
 		<dependency>
