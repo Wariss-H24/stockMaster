@@ -14,7 +14,6 @@
           </svg>
           <input v-model="recherche" placeholder="Nom, username..." />
         </div>
-        <!-- Page uniquement ADMIN → bouton toujours visible ici -->
         <button class="btn btn-primary" @click="ouvrirModal()">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
             <path d="M12 5v14M5 12h14" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/>
@@ -59,6 +58,7 @@
               </td>
               <td style="text-align:right;">
                 <div style="display:flex;gap:6px;justify-content:flex-end;">
+                  <!-- Éditer -->
                   <button class="btn btn-outline btn-sm" @click="ouvrirModal(u)">
                     <svg width="13" height="13" viewBox="0 0 24 24" fill="none">
                       <path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7" stroke="currentColor" stroke-width="1.8"/>
@@ -66,17 +66,31 @@
                     </svg>
                     Éditer
                   </button>
-                  <!-- Ne pas pouvoir se désactiver soi-même -->
+                  <!-- Désactiver : seulement si actif et pas soi-même -->
                   <button
                     v-if="u.actif && u.username !== moi"
-                    class="btn btn-danger btn-sm"
-                    @click="demanderDesactivation(u)"
+                    class="btn btn-sm"
+                    style="background:#fff;color:var(--warning);border:1px solid var(--gray-200);"
+                    @click="demanderAction(u, 'desactiver')"
                   >
                     <svg width="13" height="13" viewBox="0 0 24 24" fill="none">
                       <circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="1.8"/>
                       <path d="M15 9l-6 6M9 9l6 6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
                     </svg>
                     Désactiver
+                  </button>
+                  <!-- Supprimer : jamais soi-même -->
+                  <button
+                    v-if="u.username !== moi"
+                    class="btn btn-danger btn-sm"
+                    @click="demanderAction(u, 'supprimer')"
+                  >
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none">
+                      <polyline points="3 6 5 6 21 6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+                      <path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6" stroke="currentColor" stroke-width="1.8"/>
+                      <path d="M10 11v6M14 11v6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+                    </svg>
+                    Supprimer
                   </button>
                 </div>
               </td>
@@ -135,14 +149,25 @@
       </div>
     </div>
 
-    <!-- Modale de confirmation désactivation -->
+    <!-- Modale confirmation désactivation -->
     <ConfirmModal
-      v-if="confirm.visible"
+      v-if="confirm.visible && confirm.action === 'desactiver'"
       titre="Désactiver l'utilisateur"
       :message="`Voulez-vous désactiver le compte de « ${confirm.cible?.nomComplet} » (@${confirm.cible?.username}) ? Il ne pourra plus se connecter.`"
       type="warning"
       label-confirmer="Désactiver"
-      @confirmer="confirmerDesactivation"
+      @confirmer="confirmerAction"
+      @annuler="confirm.visible = false"
+    />
+
+    <!-- Modale confirmation suppression définitive -->
+    <ConfirmModal
+      v-if="confirm.visible && confirm.action === 'supprimer'"
+      titre="Supprimer définitivement"
+      :message="`Voulez-vous supprimer définitivement « ${confirm.cible?.nomComplet} » (@${confirm.cible?.username}) ? Cette action est irréversible.`"
+      type="danger"
+      label-confirmer="Supprimer"
+      @confirmer="confirmerAction"
       @annuler="confirm.visible = false"
     />
   </div>
@@ -160,18 +185,21 @@ export default {
     return {
       liste: [], chargement: true, modal: false, erreur: '',
       recherche: '', roleSelectionne: '',
-      confirm: { visible: false, cible: null },
+      // action : 'desactiver' | 'supprimer'
+      confirm: { visible: false, cible: null, action: '' },
       rolesDisponibles: ['ADMIN', 'GESTIONNAIRE', 'MAGASINIER', 'AUDITEUR'],
       form: { id: null, nomComplet: '', username: '', motDePasse: '', actif: true, roles: [] }
     }
   },
   computed: {
-    // Username de l'utilisateur connecté (pour empêcher l'auto-désactivation)
     moi() { return authStore.user?.username },
     listeFiltree() {
       const q = this.recherche.toLowerCase()
       if (!q) return this.liste
-      return this.liste.filter(u => u.nomComplet?.toLowerCase().includes(q) || u.username?.toLowerCase().includes(q))
+      return this.liste.filter(u =>
+        u.nomComplet?.toLowerCase().includes(q) ||
+        u.username?.toLowerCase().includes(q)
+      )
     }
   },
   async mounted() { await this.charger() },
@@ -195,34 +223,22 @@ export default {
     },
     async sauvegarder() {
       this.erreur = ''
-
-      // Validation : mot de passe obligatoire à la création
       if (!this.form.id && !this.form.motDePasse.trim()) {
         this.erreur = 'Le mot de passe est obligatoire pour un nouvel utilisateur'
         return
       }
-      if (!this.form.username.trim()) {
-        this.erreur = 'Le nom d\'utilisateur est obligatoire'
-        return
-      }
-      if (!this.form.nomComplet.trim()) {
-        this.erreur = 'Le nom complet est obligatoire'
-        return
-      }
+      if (!this.form.username.trim()) { this.erreur = "Le nom d'utilisateur est obligatoire"; return }
+      if (!this.form.nomComplet.trim()) { this.erreur = 'Le nom complet est obligatoire'; return }
 
-      // Construction du payload — ne pas envoyer motDePasse vide en modification
       const payload = {
         nomComplet: this.form.nomComplet.trim(),
         username:   this.form.username.trim(),
         actif:      this.form.actif,
         roles:      this.roleSelectionne ? [this.roleSelectionne] : []
       }
-      // Inclure le mot de passe seulement s'il est rempli
       if (this.form.motDePasse.trim()) {
         payload.motDePasse = this.form.motDePasse
       }
-
-      console.log('[UTILISATEUR] Payload envoyé:', JSON.stringify(payload))
 
       try {
         if (this.form.id) await utilisateurApi.modifier(this.form.id, payload)
@@ -230,22 +246,31 @@ export default {
         this.modal = false
         this.charger()
       } catch (e) {
-        console.error('[UTILISATEUR] Erreur:', JSON.stringify(e.response?.data))
         const data = e.response?.data
-        if (data?.erreurs) {
-          this.erreur = Object.values(data.erreurs).join(' — ')
-        } else {
-          this.erreur = data?.message || 'Erreur lors de la sauvegarde.'
-        }
+        this.erreur = data?.erreurs
+          ? Object.values(data.erreurs).join(' — ')
+          : data?.message || 'Erreur lors de la sauvegarde.'
       }
     },
-    demanderDesactivation(u) {
-      this.confirm = { visible: true, cible: u }
+
+    // Ouvre la bonne modale selon l'action demandée
+    demanderAction(u, action) {
+      this.confirm = { visible: true, cible: u, action }
     },
-    async confirmerDesactivation() {
-      await utilisateurApi.desactiver(this.confirm.cible.id)
-      this.confirm = { visible: false, cible: null }
-      this.charger()
+
+    // Exécute l'action confirmée
+    async confirmerAction() {
+      const { cible, action } = this.confirm
+      try {
+        if (action === 'desactiver') {
+          await utilisateurApi.desactiver(cible.id)
+        } else if (action === 'supprimer') {
+          await utilisateurApi.supprimer(cible.id)
+        }
+      } finally {
+        this.confirm = { visible: false, cible: null, action: '' }
+        this.charger()
+      }
     }
   }
 }

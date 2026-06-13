@@ -39,11 +39,12 @@ export const authApi = {
 }
 
 export const utilisateurApi = {
-  findAll: () => api.get('/utilisateurs'),
-  findById: (id) => api.get(`/utilisateurs/${id}`),
-  creer: (dto) => api.post('/utilisateurs', dto),
-  modifier: (id, dto) => api.put(`/utilisateurs/${id}`, dto),
-  desactiver: (id) => api.delete(`/utilisateurs/${id}`)
+  findAll:    ()        => api.get('/utilisateurs'),
+  findById:   (id)      => api.get(`/utilisateurs/${id}`),
+  creer:      (dto)     => api.post('/utilisateurs', dto),
+  modifier:   (id, dto) => api.put(`/utilisateurs/${id}`, dto),
+  desactiver: (id)      => api.delete(`/utilisateurs/${id}/desactiver`),
+  supprimer:  (id)      => api.delete(`/utilisateurs/${id}`)
 }
 
 export const entrepotApi = {

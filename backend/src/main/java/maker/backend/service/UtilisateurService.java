@@ -97,4 +97,12 @@ public class UtilisateurService {
         u.setActif(false);
         repo.save(u);
     }
+
+    // Suppression physique définitive
+    public void supprimer(Long id) {
+        if (!repo.existsById(id)) {
+            throw new ResourceNotFoundException("Utilisateur introuvable : " + id);
+        }
+        repo.deleteById(id);
+    }
 }

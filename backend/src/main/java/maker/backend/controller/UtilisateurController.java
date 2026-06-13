@@ -40,10 +40,17 @@ public class UtilisateurController {
         return service.modifier(id, dto);
     }
 
-    // Désactivation (DELETE logique, pas de suppression physique)
-    @DeleteMapping("/{id}")
+    // Désactivation logique
+    @DeleteMapping("/{id}/desactiver")
     public ResponseEntity<Void> desactiver(@PathVariable Long id) {
         service.desactiver(id);
+        return ResponseEntity.noContent().build();
+    }
+
+    // Suppression physique définitive — ADMIN seulement (règle dans SecurityConfig)
+    @DeleteMapping("/{id}")
+    public ResponseEntity<Void> supprimer(@PathVariable Long id) {
+        service.supprimer(id);
         return ResponseEntity.noContent().build();
     }
 }
