@@ -1,7 +1,3 @@
 package maker.backend.repository;
-
-import maker.backend.entity.Role;
-import org.springframework.data.jpa.repository.JpaRepository;
-
-public interface RoleRepositoryFr extends JpaRepository<Role, Long> {
-}
+// Remplacé par RoleRepository — voir RoleRepository.java
+@Deprecated interface RoleRepositoryFr {}

@@ -1,11 +1,4 @@
 package maker.backend.controller;
-
-import org.springframework.web.bind.annotation.RestController;
-import org.springframework.web.bind.annotation.RequestMapping;
-
-@RestController
-@RequestMapping("/api/products")
+// Fichier supprimé — remplacé par ProduitController sur /api/produits
 @Deprecated
-public class ProductController {
-    // Deprecated: utilisez /api/produits (ProduitController)
-}
+class ProductController {}

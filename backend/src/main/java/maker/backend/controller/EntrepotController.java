@@ -1,7 +1,9 @@
 package maker.backend.controller;
 
-import maker.backend.entity.Entrepot;
+import jakarta.validation.Valid;
+import maker.backend.dto.EntrepotDTO;
 import maker.backend.service.EntrepotService;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -9,30 +11,38 @@ import java.util.List;
 
 @RestController
 @RequestMapping("/api/entrepots")
+@CrossOrigin(origins = "http://localhost:3000")
 public class EntrepotController {
 
     private final EntrepotService service;
 
-    public EntrepotController(EntrepotService service) { this.service = service; }
+    public EntrepotController(EntrepotService service) {
+        this.service = service;
+    }
 
     @GetMapping
-    public List<Entrepot> tous() { return service.findAll(); }
-
-    @PostMapping
-    public Entrepot creer(@RequestBody Entrepot e) { return service.save(e); }
+    public List<EntrepotDTO> tous() {
+        return service.findAll();
+    }
 
     @GetMapping("/{id}")
-    public ResponseEntity<Entrepot> obtenir(@PathVariable Long id) { return service.findById(id).map(ResponseEntity::ok).orElse(ResponseEntity.notFound().build()); }
+    public EntrepotDTO obtenir(@PathVariable Long id) {
+        return service.findById(id);
+    }
+
+    @PostMapping
+    public ResponseEntity<EntrepotDTO> creer(@Valid @RequestBody EntrepotDTO dto) {
+        return ResponseEntity.status(HttpStatus.CREATED).body(service.creer(dto));
+    }
 
     @PutMapping("/{id}")
-    public ResponseEntity<Entrepot> modifier(@PathVariable Long id, @RequestBody Entrepot e) {
-        return service.findById(id).map(existing -> {
-            existing.setNom(e.getNom()); existing.setAdresse(e.getAdresse()); existing.setResponsable(e.getResponsable());
-            existing.setCapaciteTotale(e.getCapaciteTotale()); existing.setCapaciteUtilisee(e.getCapaciteUtilisee()); existing.setActif(e.isActif());
-            return ResponseEntity.ok(service.save(existing));
-        }).orElse(ResponseEntity.notFound().build());
+    public EntrepotDTO modifier(@PathVariable Long id, @Valid @RequestBody EntrepotDTO dto) {
+        return service.modifier(id, dto);
     }
 
     @DeleteMapping("/{id}")
-    public ResponseEntity<Void> supprimer(@PathVariable Long id) { return service.findById(id).map(e -> { service.delete(id); return ResponseEntity.noContent().<Void>build(); }).orElse(ResponseEntity.notFound().build()); }
+    public ResponseEntity<Void> desactiver(@PathVariable Long id) {
+        service.desactiver(id);
+        return ResponseEntity.noContent().build();
+    }
 }

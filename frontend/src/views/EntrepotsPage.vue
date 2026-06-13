@@ -1,8 +1,8 @@
 <template>
   <div>
     <div class="page-header">
-      <h1 class="page-title">Zones de stockage</h1>
-      <p class="page-subtitle">Découpage des entrepôts en zones — Module 3</p>
+      <h1 class="page-title">Entrepôts</h1>
+      <p class="page-subtitle">Gestion des entrepôts — Module 2</p>
     </div>
 
     <div class="card">
@@ -12,13 +12,13 @@
             <circle cx="11" cy="11" r="7" stroke="currentColor" stroke-width="1.8"/>
             <path d="M20 20l-3-3" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
           </svg>
-          <input v-model="recherche" placeholder="Rechercher une zone..." />
+          <input v-model="recherche" placeholder="Rechercher un entrepôt..." />
         </div>
         <button class="btn btn-primary" @click="ouvrirModal()">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
             <path d="M12 5v14M5 12h14" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/>
           </svg>
-          Nouvelle zone
+          Nouvel entrepôt
         </button>
       </div>
 
@@ -26,7 +26,11 @@
         <table>
           <thead>
             <tr>
-              <th>Zone</th><th>Entrepôt</th><th>Occupation</th><th>Capacité</th><th>Statut</th>
+              <th>Nom</th>
+              <th>Adresse</th>
+              <th>Responsable</th>
+              <th>Occupation</th>
+              <th>Statut</th>
               <th style="text-align:right;">Actions</th>
             </tr>
           </thead>
@@ -35,38 +39,40 @@
               <td colspan="6" style="text-align:center;padding:32px;color:var(--gray-400);">Chargement...</td>
             </tr>
             <tr v-else-if="listeFiltree.length === 0">
-              <td colspan="6" style="text-align:center;padding:32px;color:var(--gray-400);">Aucune zone trouvée.</td>
+              <td colspan="6" style="text-align:center;padding:32px;color:var(--gray-400);">Aucun entrepôt trouvé.</td>
             </tr>
-            <tr v-for="z in listeFiltree" :key="z.id">
-              <td><span style="font-weight:600;color:var(--gray-900);">{{ z.nom }}</span></td>
-              <td><span class="badge badge-navy">{{ z.entrepotNom }}</span></td>
+            <tr v-for="e in listeFiltree" :key="e.id">
+              <td>
+                <span style="font-weight:600;color:var(--gray-900);">{{ e.nom }}</span>
+              </td>
+              <td style="color:var(--gray-500);font-size:.82rem;">{{ e.adresse }}</td>
+              <td>{{ e.responsable || '—' }}</td>
               <td style="min-width:160px;">
                 <div style="display:flex;align-items:center;gap:8px;">
                   <div class="progress-bar">
                     <div class="progress-fill"
-                      :class="z.tauxOccupation < 50 ? 'progress-low' : z.tauxOccupation < 80 ? 'progress-mid' : 'progress-high'"
-                      :style="{ width: z.tauxOccupation + '%' }">
+                      :class="e.tauxOccupation < 50 ? 'progress-low' : e.tauxOccupation < 80 ? 'progress-mid' : 'progress-high'"
+                      :style="{ width: e.tauxOccupation + '%' }">
                     </div>
                   </div>
-                  <span style="font-size:.78rem;color:var(--gray-500);min-width:32px;">{{ z.tauxOccupation }}%</span>
+                  <span style="font-size:.78rem;color:var(--gray-500);min-width:32px;">{{ e.tauxOccupation }}%</span>
                 </div>
               </td>
-              <td style="font-size:.82rem;color:var(--gray-500);">{{ z.capaciteUtilisee }} / {{ z.capaciteTotale }}</td>
               <td>
-                <span class="badge" :class="z.actif ? 'badge-success' : 'badge-danger'">
-                  {{ z.actif ? 'Actif' : 'Inactif' }}
+                <span class="badge" :class="e.actif ? 'badge-success' : 'badge-danger'">
+                  {{ e.actif ? 'Actif' : 'Inactif' }}
                 </span>
               </td>
               <td style="text-align:right;">
                 <div style="display:flex;gap:6px;justify-content:flex-end;">
-                  <button class="btn btn-outline btn-sm" @click="ouvrirModal(z)">
+                  <button class="btn btn-outline btn-sm" @click="ouvrirModal(e)">
                     <svg width="13" height="13" viewBox="0 0 24 24" fill="none">
                       <path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7" stroke="currentColor" stroke-width="1.8"/>
                       <path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z" stroke="currentColor" stroke-width="1.8"/>
                     </svg>
                     Éditer
                   </button>
-                  <button class="btn btn-danger btn-sm" @click="desactiver(z.id)">
+                  <button class="btn btn-danger btn-sm" @click="desactiver(e.id)">
                     <svg width="13" height="13" viewBox="0 0 24 24" fill="none">
                       <circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="1.8"/>
                       <path d="M15 9l-6 6M9 9l6 6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
@@ -85,7 +91,7 @@
     <div class="modal-overlay" v-if="modal" @click.self="modal = false">
       <div class="modal">
         <div class="modal-header">
-          <h3 class="modal-title">{{ form.id ? 'Modifier la zone' : 'Nouvelle zone' }}</h3>
+          <h3 class="modal-title">{{ form.id ? 'Modifier l\'entrepôt' : 'Nouvel entrepôt' }}</h3>
           <button class="modal-close" @click="modal = false">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
               <path d="M6 6l12 12M18 6L6 18" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
@@ -94,15 +100,16 @@
         </div>
         <div class="modal-body">
           <div class="form-group">
-            <label class="form-label">Nom de la zone *</label>
-            <input class="form-input" v-model="form.nom" placeholder="ex: Zone A - Réception" />
+            <label class="form-label">Nom *</label>
+            <input class="form-input" v-model="form.nom" placeholder="ex: ENT-Paris" />
           </div>
           <div class="form-group">
-            <label class="form-label">Entrepôt *</label>
-            <select class="form-select" v-model.number="form.entrepotId">
-              <option value="" disabled>Sélectionner un entrepôt</option>
-              <option v-for="e in entrepots" :key="e.id" :value="e.id">{{ e.nom }}</option>
-            </select>
+            <label class="form-label">Adresse *</label>
+            <input class="form-input" v-model="form.adresse" placeholder="12 Rue de la Logistique, Paris" />
+          </div>
+          <div class="form-group">
+            <label class="form-label">Responsable</label>
+            <input class="form-input" v-model="form.responsable" placeholder="Jean Dupont" />
           </div>
           <div class="form-row">
             <div class="form-group">
@@ -114,6 +121,10 @@
               <input class="form-input" type="number" v-model.number="form.capaciteUtilisee" min="0" />
             </div>
           </div>
+          <label class="form-check">
+            <input type="checkbox" v-model="form.actif" />
+            <span>Entrepôt actif</span>
+          </label>
           <div class="form-error" v-if="erreur">{{ erreur }}</div>
         </div>
         <div class="modal-footer">
@@ -126,54 +137,52 @@
 </template>
 
 <script>
-import { zoneApi, entrepotApi } from '../services/api.js'
+import { entrepotApi } from '../services/api.js'
 
 export default {
-  name: 'ZonesPage',
+  name: 'EntrepotsPage',
   data() {
     return {
-      liste: [], entrepots: [], chargement: true, modal: false, erreur: '', recherche: '',
-      form: { id: null, nom: '', entrepotId: '', capaciteTotale: 0, capaciteUtilisee: 0 }
+      liste: [], chargement: true, modal: false, erreur: '', recherche: '',
+      form: { id: null, nom: '', adresse: '', responsable: '', capaciteTotale: 0, capaciteUtilisee: 0, actif: true }
     }
   },
   computed: {
     listeFiltree() {
       const q = this.recherche.toLowerCase()
       if (!q) return this.liste
-      return this.liste.filter(z => z.nom?.toLowerCase().includes(q) || z.entrepotNom?.toLowerCase().includes(q))
+      return this.liste.filter(e => e.nom?.toLowerCase().includes(q) || e.adresse?.toLowerCase().includes(q) || e.responsable?.toLowerCase().includes(q))
     }
   },
   async mounted() {
-    this.chargement = true
-    try {
-      const [z, e] = await Promise.all([zoneApi.findAll(), entrepotApi.findAll()])
-      this.liste = z.data
-      this.entrepots = e.data
-    } finally { this.chargement = false }
+    await this.charger()
   },
   methods: {
-    ouvrirModal(z = null) {
+    async charger() {
+      this.chargement = true
+      try { const r = await entrepotApi.findAll(); this.liste = r.data }
+      finally { this.chargement = false }
+    },
+    ouvrirModal(e = null) {
       this.erreur = ''
-      this.form = z
-        ? { id: z.id, nom: z.nom, entrepotId: z.entrepotId, capaciteTotale: z.capaciteTotale, capaciteUtilisee: z.capaciteUtilisee }
-        : { id: null, nom: '', entrepotId: '', capaciteTotale: 0, capaciteUtilisee: 0 }
+      this.form = e ? { ...e } : { id: null, nom: '', adresse: '', responsable: '', capaciteTotale: 0, capaciteUtilisee: 0, actif: true }
       this.modal = true
     },
     async sauvegarder() {
       this.erreur = ''
       try {
-        if (this.form.id) await zoneApi.modifier(this.form.id, this.form)
-        else await zoneApi.creer(this.form)
+        if (this.form.id) await entrepotApi.modifier(this.form.id, this.form)
+        else await entrepotApi.creer(this.form)
         this.modal = false
-        const r = await zoneApi.findAll(); this.liste = r.data
+        this.charger()
       } catch (e) {
         this.erreur = e.response?.data?.message || 'Erreur lors de la sauvegarde.'
       }
     },
     async desactiver(id) {
-      if (!confirm('Désactiver cette zone ?')) return
-      await zoneApi.desactiver(id)
-      const r = await zoneApi.findAll(); this.liste = r.data
+      if (!confirm('Désactiver cet entrepôt ?')) return
+      await entrepotApi.desactiver(id)
+      this.charger()
     }
   }
 }

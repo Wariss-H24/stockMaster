@@ -1,7 +1,9 @@
 package maker.backend.controller;
 
-import maker.backend.entity.Utilisateur;
+import jakarta.validation.Valid;
+import maker.backend.dto.UtilisateurDTO;
 import maker.backend.service.UtilisateurService;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -9,35 +11,39 @@ import java.util.List;
 
 @RestController
 @RequestMapping("/api/utilisateurs")
+@CrossOrigin(origins = "http://localhost:3000")
 public class UtilisateurController {
 
     private final UtilisateurService service;
 
-    public UtilisateurController(UtilisateurService service) { this.service = service; }
+    public UtilisateurController(UtilisateurService service) {
+        this.service = service;
+    }
 
     @GetMapping
-    public List<Utilisateur> tous() { return service.findAll(); }
-
-    @PostMapping
-    public Utilisateur creer(@RequestBody Utilisateur u) { return service.save(u); }
+    public List<UtilisateurDTO> tous() {
+        return service.findAll();
+    }
 
     @GetMapping("/{id}")
-    public ResponseEntity<Utilisateur> obtenir(@PathVariable Long id) { return service.findById(id).map(ResponseEntity::ok).orElse(ResponseEntity.notFound().build()); }
+    public UtilisateurDTO obtenir(@PathVariable Long id) {
+        return service.findById(id);
+    }
+
+    @PostMapping
+    public ResponseEntity<UtilisateurDTO> creer(@Valid @RequestBody UtilisateurDTO dto) {
+        return ResponseEntity.status(HttpStatus.CREATED).body(service.creer(dto));
+    }
 
     @PutMapping("/{id}")
-    public ResponseEntity<Utilisateur> mettreAJour(@PathVariable Long id, @RequestBody Utilisateur u) {
-        return service.findById(id).map(existing -> {
-            existing.setUsername(u.getUsername());
-            existing.setNomComplet(u.getNomComplet());
-            existing.setMotDePasse(u.getMotDePasse());
-            existing.setActif(u.isActif());
-            return ResponseEntity.ok(service.save(existing));
-        }).orElse(ResponseEntity.notFound().build());
+    public UtilisateurDTO modifier(@PathVariable Long id, @Valid @RequestBody UtilisateurDTO dto) {
+        return service.modifier(id, dto);
     }
 
+    // Désactivation (DELETE logique, pas de suppression physique)
     @DeleteMapping("/{id}")
-    public ResponseEntity<Void> supprimer(@PathVariable Long id) {
-        return service.findById(id).map(u -> { service.delete(id); return ResponseEntity.noContent().<Void>build(); }).orElse(ResponseEntity.notFound().build());
+    public ResponseEntity<Void> desactiver(@PathVariable Long id) {
+        service.desactiver(id);
+        return ResponseEntity.noContent().build();
     }
-
 }
