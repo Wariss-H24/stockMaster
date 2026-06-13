@@ -1,7 +1,6 @@
 package maker.backend.bootstrap;
 
 import maker.backend.entity.*;
-    // import maker.backend.repository.*;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
