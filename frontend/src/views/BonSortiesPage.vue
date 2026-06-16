@@ -47,11 +47,27 @@
               <td style="text-align:right;">
                 <button class="btn btn-outline btn-sm" @click="ouvrirModal(b)">Voir</button>
                 <button class="btn btn-primary btn-sm" @click="valider(b)" v-if="b.statut === 'BROUILLON'">Valider</button>
-                <button class="btn btn-danger btn-sm" @click="supprimer(b)" v-if="b.statut === 'BROUILLON'">Supprimer</button>
+                <button class="btn btn-danger btn-sm" @click="demanderSuppression(b)" v-if="b.statut === 'BROUILLON'">Supprimer</button>
               </td>
             </tr>
           </tbody>
         </table>
+      </div>
+    </div>
+
+    <div class="modal-overlay" v-if="deleteModal" @click.self="annulerSuppression()">
+      <div class="modal small-modal">
+        <div class="modal-header">
+          <h3 class="modal-title">Confirmer la suppression</h3>
+        </div>
+        <div class="modal-body">
+          <p>Voulez-vous vraiment supprimer ce bon de sortie en brouillon ?</p>
+          <p v-if="toDelete"><strong>Id:</strong> {{ toDelete.id }} — <strong>Destination:</strong> {{ toDelete.destination }}</p>
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-outline" @click="annulerSuppression">Annuler</button>
+          <button class="btn btn-danger" @click="confirmerSuppression">Supprimer</button>
+        </div>
       </div>
     </div>
 
@@ -120,7 +136,9 @@ export default {
     return {
       liste: [], entrepots: [], produits: [], recherche: '', chargement: true,
       modal: false, erreur: '',
-      form: { id: null, entrepotId: '', destination: '', commentaire: '', lignes: [] }
+      form: { id: null, entrepotId: '', destination: '', commentaire: '', lignes: [] },
+      deleteModal: false,
+      toDelete: null
     }
   },
   computed: {
@@ -188,12 +206,21 @@ export default {
         alert(e.response?.data?.message || 'Impossible de valider le bon.')
       }
     },
-    async supprimer(bon) {
-      if (!confirm('Supprimer ce bon de sortie en brouillon ?')) return
+    demanderSuppression(bon) {
+      this.toDelete = bon
+      this.deleteModal = true
+    },
+    annulerSuppression() {
+      this.toDelete = null
+      this.deleteModal = false
+    },
+    async confirmerSuppression() {
       try {
-        await sortieApi.supprimer(bon.id)
+        await sortieApi.supprimer(this.toDelete.id)
+        this.annulerSuppression()
         await this.charger()
       } catch (e) {
+        this.annulerSuppression()
         alert(e.response?.data?.message || 'Impossible de supprimer le bon.')
       }
     },
