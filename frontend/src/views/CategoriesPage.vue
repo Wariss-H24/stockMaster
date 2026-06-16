@@ -45,8 +45,8 @@
                 </span>
               </td>
               <td style="text-align:right;">
-                <button class="btn btn-outline btn-sm" @click="ouvrirModal(c)">Éditer</button>
-                <button class="btn btn-danger btn-sm" @click="demanderDesactivation(c)" v-if="c.actif">Désactiver</button>
+                <button v-if="peutEcrire" class="btn btn-outline btn-sm" @click="ouvrirModal(c)">Éditer</button>
+                <button v-if="peutSupprimer && c.actif" class="btn btn-danger btn-sm" @click="demanderDesactivation(c)">Désactiver</button>
               </td>
             </tr>
           </tbody>
@@ -58,7 +58,9 @@
       <div class="modal">
         <div class="modal-header">
           <h3 class="modal-title">{{ form.id ? 'Modifier la catégorie' : 'Nouvelle catégorie' }}</h3>
-          <button class="modal-close" @click="modal = false">✕</button>
+          <button class="modal-close" @click="modal = false">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M6 6l12 12M18 6L6 18" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+          </button>
         </div>
         <div class="modal-body">
           <div class="form-group">
@@ -115,9 +117,8 @@ export default {
       if (!q) return this.liste
       return this.liste.filter(c => c.nom?.toLowerCase().includes(q) || c.description?.toLowerCase().includes(q))
     },
-    peutEcrire() {
-      return authStore.aUnRole('ADMIN', 'GESTIONNAIRE')
-    }
+    peutEcrire()    { return authStore.aUnRole('ADMIN', 'GESTIONNAIRE') },
+    peutSupprimer() { return authStore.aUnRole('ADMIN', 'GESTIONNAIRE') }
   },
   async mounted() { await this.charger() },
   methods: {

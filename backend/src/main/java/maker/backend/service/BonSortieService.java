@@ -7,6 +7,7 @@ import maker.backend.entity.Entrepot;
 import maker.backend.entity.MouvementStock;
 import maker.backend.entity.Produit;
 import maker.backend.entity.Stock;
+import maker.backend.entity.SortieLigne;
 import maker.backend.exception.ResourceNotFoundException;
 import maker.backend.repository.BonSortieRepository;
 import maker.backend.repository.EntrepotRepository;
@@ -92,11 +93,11 @@ public class BonSortieService {
     }
 
     private void appliquerSortie(BonSortie bon) {
-        for (SortieLigneDTO ligne : bon.getLignes().stream().map(this::toDTO).collect(Collectors.toList())) {
-            Stock stock = stockService.findOrCreateStock(ligne.getProduitId(), bon.getEntrepot().getId(), null);
+        for (SortieLigne ligne : bon.getLignes()) {
+            Stock stock = stockService.findOrCreateStock(ligne.getProduit().getId(), bon.getEntrepot().getId(), null);
             if (stock.getQuantiteDisponible() < ligne.getQuantite()) {
-                throw new IllegalArgumentException("Stock insuffisant pour le produit id=" + ligne.getProduitId() +
-                        " dans l'entrepôt " + bon.getEntrepot().getNom() +
+                throw new IllegalArgumentException("Stock insuffisant pour le produit '" + ligne.getProduit().getNom() +
+                        "' dans l'entrepôt " + bon.getEntrepot().getNom() +
                         " (quantité disponible = " + stock.getQuantiteDisponible() + ")");
             }
             stock.setQuantiteDisponible(stock.getQuantiteDisponible() - ligne.getQuantite());
@@ -130,7 +131,7 @@ public class BonSortieService {
         return dto;
     }
 
-    private SortieLigneDTO toDTO(maker.backend.entity.SortieLigne ligne) {
+    private SortieLigneDTO toDTO(SortieLigne ligne) {
         SortieLigneDTO dto = new SortieLigneDTO();
         dto.setId(ligne.getId());
         dto.setProduitId(ligne.getProduit().getId());
@@ -147,8 +148,8 @@ public class BonSortieService {
         return bon;
     }
 
-    private maker.backend.entity.SortieLigne toEntity(SortieLigneDTO dto, BonSortie bon) {
-        maker.backend.entity.SortieLigne ligne = new maker.backend.entity.SortieLigne();
+    private SortieLigne toEntity(SortieLigneDTO dto, BonSortie bon) {
+        SortieLigne ligne = new SortieLigne();
         ligne.setBonSortie(bon);
         ligne.setProduit(findProduit(dto.getProduitId()));
         ligne.setQuantite(dto.getQuantite());

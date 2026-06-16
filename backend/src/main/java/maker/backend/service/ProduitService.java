@@ -1,9 +1,11 @@
 package maker.backend.service;
 
 import maker.backend.dto.ProduitDTO;
+import maker.backend.entity.Categorie;
 import maker.backend.entity.Produit;
 import maker.backend.exception.ResourceNotFoundException;
 import maker.backend.mapper.ProduitMapper;
+import maker.backend.repository.CategorieRepository;
 import maker.backend.repository.ProduitRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -16,14 +18,15 @@ import java.util.stream.Collectors;
 public class ProduitService {
 
     private final ProduitRepository repo;
+    private final CategorieRepository categorieRepo;
     private final ProduitMapper mapper;
 
-    public ProduitService(ProduitRepository repo, ProduitMapper mapper) {
+    public ProduitService(ProduitRepository repo, CategorieRepository categorieRepo, ProduitMapper mapper) {
         this.repo = repo;
+        this.categorieRepo = categorieRepo;
         this.mapper = mapper;
     }
 
-    // Retourne uniquement les produits non supprimés
     public List<ProduitDTO> findAll() {
         return repo.findBySupprimeFalse().stream().map(mapper::toDTO).collect(Collectors.toList());
     }
@@ -37,6 +40,7 @@ public class ProduitService {
 
     public ProduitDTO creer(ProduitDTO dto) {
         Produit p = mapper.toEntity(dto);
+        p.setCategorie(resolveCategorie(dto.getCategorieId()));
         return mapper.toDTO(repo.save(p));
     }
 
@@ -46,7 +50,7 @@ public class ProduitService {
         existing.setReference(dto.getReference());
         existing.setCodeBarre(dto.getCodeBarre());
         existing.setNom(dto.getNom());
-        existing.setCategorie(dto.getCategorie());
+        existing.setCategorie(resolveCategorie(dto.getCategorieId()));
         existing.setDescription(dto.getDescription());
         existing.setPrixAchat(dto.getPrixAchat());
         existing.setPrixVente(dto.getPrixVente());
@@ -55,11 +59,16 @@ public class ProduitService {
         return mapper.toDTO(repo.save(existing));
     }
 
-    // Suppression logique : le produit reste en base avec supprime = true
     public void supprimerLogique(Long id) {
         Produit p = repo.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Produit introuvable : " + id));
         p.setSupprime(true);
         repo.save(p);
+    }
+
+    private Categorie resolveCategorie(Long categorieId) {
+        if (categorieId == null) return null;
+        return categorieRepo.findById(categorieId)
+                .orElseThrow(() -> new ResourceNotFoundException("Catégorie introuvable : " + categorieId));
     }
 }

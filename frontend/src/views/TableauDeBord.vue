@@ -29,20 +29,20 @@
           </svg>
         </div>
         <div class="stat-body">
-          <p class="stat-label">Zones</p>
-          <p class="stat-value">{{ stats.zones }}</p>
+          <p class="stat-label">Produits</p>
+          <p class="stat-value">{{ stats.produits }}</p>
         </div>
       </div>
       <div class="stat-card">
-        <div class="stat-icon" style="background:#fef3c7;">
+        <div class="stat-icon" style="background:#fee2e2;">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
-            <path d="M20 7H4a1 1 0 00-1 1v10a1 1 0 001 1h16a1 1 0 001-1V8a1 1 0 00-1-1z" stroke="#d97706" stroke-width="1.8"/>
-            <path d="M16 7V5a2 2 0 00-2-2h-4a2 2 0 00-2 2v2" stroke="#d97706" stroke-width="1.8"/>
+            <path d="M12 9v4M12 17h.01" stroke="#dc2626" stroke-width="2" stroke-linecap="round"/>
+            <path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" stroke="#dc2626" stroke-width="1.8"/>
           </svg>
         </div>
         <div class="stat-body">
-          <p class="stat-label">Produits</p>
-          <p class="stat-value">{{ stats.produits }}</p>
+          <p class="stat-label">Stocks critiques</p>
+          <p class="stat-value" style="color:var(--danger);">{{ stats.stocksCritiques }}</p>
         </div>
       </div>
       <div class="stat-card">
@@ -66,50 +66,77 @@
       <div v-else-if="entrepots.length === 0" style="text-align:center;padding:30px;color:var(--gray-400);">Aucun entrepôt disponible.</div>
       <div v-else>
         <div v-for="e in entrepots" :key="e.id" style="margin-bottom:18px;">
-          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:7px;">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:7px;flex-wrap:wrap;gap:6px;">
             <div>
               <span style="font-weight:600;font-size:.875rem;color:var(--gray-900);">{{ e.nom }}</span>
               <span style="font-size:.78rem;color:var(--gray-500);margin-left:8px;">{{ e.adresse }}</span>
             </div>
             <div style="display:flex;align-items:center;gap:10px;">
               <span style="font-size:.8rem;color:var(--gray-500);">{{ e.capaciteUtilisee }} / {{ e.capaciteTotale }}</span>
-              <span class="badge" :class="e.tauxOccupation < 50 ? 'badge-success' : e.tauxOccupation < 80 ? 'badge-warning' : 'badge-danger'">
-                {{ e.tauxOccupation }}%
+              <span class="badge" :class="(e.tauxOccupation||0) < 50 ? 'badge-success' : (e.tauxOccupation||0) < 80 ? 'badge-warning' : 'badge-danger'">
+                {{ e.tauxOccupation || 0 }}%
               </span>
             </div>
           </div>
           <div class="progress-bar">
             <div class="progress-fill"
-              :class="e.tauxOccupation < 50 ? 'progress-low' : e.tauxOccupation < 80 ? 'progress-mid' : 'progress-high'"
-              :style="{ width: e.tauxOccupation + '%' }">
+              :class="(e.tauxOccupation||0) < 50 ? 'progress-low' : (e.tauxOccupation||0) < 80 ? 'progress-mid' : 'progress-high'"
+              :style="{ width: (e.tauxOccupation || 0) + '%' }">
             </div>
           </div>
         </div>
+      </div>
+    </div>
+
+    <!-- Stocks critiques -->
+    <div class="card" v-if="stocksCritiques.length > 0" style="margin-top:20px;">
+      <h2 style="font-size:.95rem;font-weight:700;color:var(--danger);margin-bottom:16px;">⚠ Stocks critiques</h2>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr><th>Produit</th><th>Entrepôt</th><th>Disponible</th><th>Min requis</th></tr>
+          </thead>
+          <tbody>
+            <tr v-for="s in stocksCritiques" :key="s.id" style="background:#fff5f5;">
+              <td style="font-weight:600;">{{ s.produitNom }}</td>
+              <td>{{ s.entrepotNom }}</td>
+              <td style="color:var(--danger);font-weight:700;">{{ s.quantiteDisponible }}</td>
+              <td style="color:var(--gray-500);">{{ s.stockMin }}</td>
+            </tr>
+          </tbody>
+        </table>
       </div>
     </div>
   </div>
 </template>
 
 <script>
-import { entrepotApi, zoneApi, produitApi, utilisateurApi } from '../services/api.js'
+import { entrepotApi, produitApi, utilisateurApi, stockApi } from '../services/api.js'
 
 export default {
   name: 'TableauDeBord',
   data() {
     return {
       chargement: true,
-      stats: { entrepots: 0, zones: 0, produits: 0, utilisateurs: 0 },
-      entrepots: []
+      stats: { entrepots: 0, produits: 0, stocksCritiques: 0, utilisateurs: 0 },
+      entrepots: [],
+      stocksCritiques: []
     }
   },
   async mounted() {
     try {
-      const [e, z, p, u] = await Promise.all([
-        entrepotApi.findAll(), zoneApi.findAll(),
-        produitApi.findAll(), utilisateurApi.findAll()
+      const [e, p, u, s] = await Promise.all([
+        entrepotApi.findAll(), produitApi.findAll(),
+        utilisateurApi.findAll(), stockApi.findAll()
       ])
       this.entrepots = e.data
-      this.stats = { entrepots: e.data.length, zones: z.data.length, produits: p.data.length, utilisateurs: u.data.length }
+      this.stocksCritiques = s.data.filter(st => st.stockMin > 0 && st.quantiteDisponible < st.stockMin)
+      this.stats = {
+        entrepots: e.data.length,
+        produits: p.data.length,
+        stocksCritiques: this.stocksCritiques.length,
+        utilisateurs: u.data.length
+      }
     } finally {
       this.chargement = false
     }

@@ -4,9 +4,6 @@ import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
 import lombok.Data;
 
-/**
- * DTO Produit — tous les champs du module 4.
- */
 @Data
 public class ProduitDTO {
     private Long id;
@@ -19,7 +16,9 @@ public class ProduitDTO {
     @NotBlank(message = "Le nom est obligatoire")
     private String nom;
 
-    private String categorie;
+    private Long categorieId;
+    private String categorieNom;
+
     private String description;
 
     @Min(value = 0, message = "Le prix d'achat ne peut pas être négatif")
@@ -31,6 +30,5 @@ public class ProduitDTO {
     private Double poids;
     private Double volume;
 
-    // Indique si le produit est supprimé logiquement
     private boolean supprime;
 }

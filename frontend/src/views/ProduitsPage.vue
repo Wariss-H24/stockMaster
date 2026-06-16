@@ -49,7 +49,7 @@
                 <p v-if="p.description" style="font-size:.75rem;color:var(--gray-400);margin-top:1px;">{{ p.description }}</p>
               </td>
               <td>
-                <span class="badge badge-info" v-if="p.categorie">{{ p.categorie }}</span>
+                <span class="badge badge-info" v-if="p.categorieNom">{{ p.categorieNom }}</span>
                 <span v-else style="color:var(--gray-400);">—</span>
               </td>
               <td style="font-size:.875rem;">{{ p.prixAchat != null ? p.prixAchat.toFixed(2) + ' €' : '—' }}</td>
@@ -115,7 +115,10 @@
           <div class="form-row">
             <div class="form-group">
               <label class="form-label">Catégorie</label>
-              <input class="form-input" v-model="form.categorie" placeholder="Informatique" />
+              <select class="form-select" v-model.number="form.categorieId">
+                <option :value="null">— Sans catégorie —</option>
+                <option v-for="c in categories" :key="c.id" :value="c.id">{{ c.nom }}</option>
+              </select>
             </div>
             <div class="form-group">
               <label class="form-label">Description</label>
@@ -151,7 +154,6 @@
       </div>
     </div>
 
-    <!-- Modale de confirmation suppression -->
     <ConfirmModal
       v-if="confirm.visible"
       titre="Supprimer le produit"
@@ -165,7 +167,7 @@
 </template>
 
 <script>
-import { produitApi } from '../services/api.js'
+import { produitApi, categoryApi } from '../services/api.js'
 import { authStore } from '../services/authStore.js'
 import ConfirmModal from '../components/ConfirmModal.vue'
 
@@ -174,9 +176,9 @@ export default {
   components: { ConfirmModal },
   data() {
     return {
-      liste: [], chargement: true, modal: false, erreur: '', recherche: '',
+      liste: [], categories: [], chargement: true, modal: false, erreur: '', recherche: '',
       confirm: { visible: false, cible: null },
-      form: { id: null, reference: '', codeBarre: '', nom: '', categorie: '', description: '', prixAchat: null, prixVente: null, poids: null, volume: null }
+      form: { id: null, reference: '', codeBarre: '', nom: '', categorieId: null, description: '', prixAchat: null, prixVente: null, poids: null, volume: null }
     }
   },
   computed: {
@@ -188,11 +190,13 @@ export default {
       return this.liste.filter(p =>
         p.nom?.toLowerCase().includes(q) ||
         p.reference?.toLowerCase().includes(q) ||
-        p.categorie?.toLowerCase().includes(q)
+        p.categorieNom?.toLowerCase().includes(q)
       )
     }
   },
-  async mounted() { await this.charger() },
+  async mounted() {
+    await Promise.all([this.charger(), this.chargerCategories()])
+  },
   methods: {
     marge(p) { return Math.round(((p.prixVente - p.prixAchat) / p.prixVente) * 100) },
     async charger() {
@@ -200,9 +204,15 @@ export default {
       try { const r = await produitApi.findAll(); this.liste = r.data }
       finally { this.chargement = false }
     },
+    async chargerCategories() {
+      const r = await categoryApi.findAll()
+      this.categories = r.data.filter(c => c.actif)
+    },
     ouvrirModal(p = null) {
       this.erreur = ''
-      this.form = p ? { ...p } : { id: null, reference: '', codeBarre: '', nom: '', categorie: '', description: '', prixAchat: null, prixVente: null, poids: null, volume: null }
+      this.form = p
+        ? { id: p.id, reference: p.reference, codeBarre: p.codeBarre, nom: p.nom, categorieId: p.categorieId || null, description: p.description, prixAchat: p.prixAchat, prixVente: p.prixVente, poids: p.poids, volume: p.volume }
+        : { id: null, reference: '', codeBarre: '', nom: '', categorieId: null, description: '', prixAchat: null, prixVente: null, poids: null, volume: null }
       this.modal = true
     },
     async sauvegarder() {
@@ -216,9 +226,7 @@ export default {
         this.erreur = e.response?.data?.message || 'Erreur lors de la sauvegarde.'
       }
     },
-    demanderSuppression(p) {
-      this.confirm = { visible: true, cible: p }
-    },
+    demanderSuppression(p) { this.confirm = { visible: true, cible: p } },
     async confirmerSuppression() {
       await produitApi.supprimer(this.confirm.cible.id)
       this.confirm = { visible: false, cible: null }

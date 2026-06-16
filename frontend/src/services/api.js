@@ -1,30 +1,16 @@
 import axios from 'axios'
 import { authStore } from './authStore'
 
-// Instance axios avec base URL commune
 const api = axios.create({ baseURL: '/api' })
 
-// Intercepteur : injecte automatiquement le token JWT dans chaque requête
 api.interceptors.request.use(config => {
-  if (authStore.token) {
-    config.headers.Authorization = `Bearer ${authStore.token}`
-  }
-  // LOG : affiche exactement ce qui part vers le backend
-  console.log('[API REQUEST]', config.method?.toUpperCase(), config.baseURL + config.url)
-  console.log('[API REQUEST] body:', JSON.stringify(config.data))
-  console.log('[API REQUEST] headers:', JSON.stringify(config.headers))
+  if (authStore.token) config.headers.Authorization = `Bearer ${authStore.token}`
   return config
 })
 
-// Intercepteur réponse : déconnexion automatique si 401 (token expiré)
 api.interceptors.response.use(
-  res => {
-    console.log('[API RESPONSE]', res.status, res.config.url)
-    return res
-  },
+  res => res,
   err => {
-    console.error('[API ERROR]', err.response?.status, err.config?.url)
-    console.error('[API ERROR] data:', JSON.stringify(err.response?.data))
     if (err.response?.status === 401) {
       authStore.logout()
       window.location.href = '/login'
@@ -34,7 +20,7 @@ api.interceptors.response.use(
 )
 
 export const authApi = {
-  login: (dto) => api.post('/auth/login', dto),
+  login:    (dto) => api.post('/auth/login', dto),
   register: (dto) => api.post('/auth/register', dto)
 }
 
@@ -48,70 +34,71 @@ export const utilisateurApi = {
 }
 
 export const entrepotApi = {
-  findAll: () => api.get('/entrepots'),
-  findById: (id) => api.get(`/entrepots/${id}`),
-  creer: (dto) => api.post('/entrepots', dto),
-  modifier: (id, dto) => api.put(`/entrepots/${id}`, dto),
-  desactiver: (id) => api.delete(`/entrepots/${id}`)
+  findAll:    ()        => api.get('/entrepots'),
+  findById:   (id)      => api.get(`/entrepots/${id}`),
+  creer:      (dto)     => api.post('/entrepots', dto),
+  modifier:   (id, dto) => api.put(`/entrepots/${id}`, dto),
+  desactiver: (id)      => api.delete(`/entrepots/${id}`)
 }
 
 export const zoneApi = {
-  findAll: () => api.get('/zones'),
-  findById: (id) => api.get(`/zones/${id}`),
-  creer: (dto) => api.post('/zones', dto),
-  modifier: (id, dto) => api.put(`/zones/${id}`, dto),
-  desactiver: (id) => api.delete(`/zones/${id}`)
+  findAll:    ()        => api.get('/zones'),
+  findById:   (id)      => api.get(`/zones/${id}`),
+  creer:      (dto)     => api.post('/zones', dto),
+  modifier:   (id, dto) => api.put(`/zones/${id}`, dto),
+  desactiver: (id)      => api.delete(`/zones/${id}`)
 }
 
 export const produitApi = {
-  findAll: () => api.get('/produits'),
-  findById: (id) => api.get(`/produits/${id}`),
-  creer: (dto) => api.post('/produits', dto),
+  findAll:  ()        => api.get('/produits'),
+  findById: (id)      => api.get(`/produits/${id}`),
+  creer:    (dto)     => api.post('/produits', dto),
   modifier: (id, dto) => api.put(`/produits/${id}`, dto),
-  supprimer: (id) => api.delete(`/produits/${id}`)
+  supprimer:(id)      => api.delete(`/produits/${id}`)
 }
 
 export const categoryApi = {
-  findAll: () => api.get('/categories'),
-  findById: (id) => api.get(`/categories/${id}`),
-  creer: (dto) => api.post('/categories', dto),
-  modifier: (id, dto) => api.put(`/categories/${id}`, dto),
-  desactiver: (id) => api.delete(`/categories/${id}`)
+  findAll:    ()        => api.get('/categories'),
+  findById:   (id)      => api.get(`/categories/${id}`),
+  creer:      (dto)     => api.post('/categories', dto),
+  modifier:   (id, dto) => api.put(`/categories/${id}`, dto),
+  desactiver: (id)      => api.delete(`/categories/${id}`)
 }
 
 export const fournisseurApi = {
-  findAll: () => api.get('/fournisseurs'),
-  findById: (id) => api.get(`/fournisseurs/${id}`),
-  creer: (dto) => api.post('/fournisseurs', dto),
-  modifier: (id, dto) => api.put(`/fournisseurs/${id}`, dto),
-  desactiver: (id) => api.delete(`/fournisseurs/${id}`)
+  findAll:    ()        => api.get('/fournisseurs'),
+  findById:   (id)      => api.get(`/fournisseurs/${id}`),
+  livraisons: (id)      => api.get(`/fournisseurs/${id}/livraisons`),
+  creer:      (dto)     => api.post('/fournisseurs', dto),
+  modifier:   (id, dto) => api.put(`/fournisseurs/${id}`, dto),
+  desactiver: (id)      => api.delete(`/fournisseurs/${id}`)
 }
 
 export const stockApi = {
-  findAll: () => api.get('/stocks'),
+  findAll:  ()   => api.get('/stocks'),
   findById: (id) => api.get(`/stocks/${id}`)
 }
 
 export const mouvementStockApi = {
-  findAll: () => api.get('/mouvements-stock'),
-  findByType: (type) => api.get(`/mouvements-stock/type/${type}`),
-  findByStockId: (stockId) => api.get(`/mouvements-stock/stock/${stockId}`)
+  findAll:      ()       => api.get('/mouvements-stock'),
+  findByType:   (type)   => api.get(`/mouvements-stock/type/${type}`),
+  findByStockId:(stockId)=> api.get(`/mouvements-stock/stock/${stockId}`)
 }
 
 export const receptionApi = {
-  findAll: () => api.get('/bon-receptions'),
-  findById: (id) => api.get(`/bon-receptions/${id}`),
-  creer: (dto) => api.post('/bon-receptions', dto),
+  findAll:  ()        => api.get('/bon-receptions'),
+  findById: (id)      => api.get(`/bon-receptions/${id}`),
+  creer:    (dto)     => api.post('/bon-receptions', dto),
   modifier: (id, dto) => api.put(`/bon-receptions/${id}`, dto),
-  valider: (id) => api.post(`/bon-receptions/${id}/valider`),
-  supprimer: (id) => api.delete(`/bon-receptions/${id}`)
+  valider:  (id)      => api.post(`/bon-receptions/${id}/valider`),
+  supprimer:(id)      => api.delete(`/bon-receptions/${id}`)
 }
 
 export const sortieApi = {
-  findAll: () => api.get('/bon-sorties'),
-  findById: (id) => api.get(`/bon-sorties/${id}`),
-  creer: (dto) => api.post('/bon-sorties', dto),
+  findAll:  ()        => api.get('/bon-sorties'),
+  findById: (id)      => api.get(`/bon-sorties/${id}`),
+  creer:    (dto)     => api.post('/bon-sorties', dto),
   modifier: (id, dto) => api.put(`/bon-sorties/${id}`, dto),
-  valider: (id) => api.post(`/bon-sorties/${id}/valider`),
-  supprimer: (id) => api.delete(`/bon-sorties/${id}`)
+  valider:  (id)      => api.post(`/bon-sorties/${id}/valider`),
+  supprimer:(id)      => api.delete(`/bon-sorties/${id}`)
 }

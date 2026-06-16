@@ -169,13 +169,20 @@ export default {
   computed: {
     titreRoute() {
       const titres = {
-        '/tableau-de-bord': 'Tableau de bord',
-        '/entrepots': 'Entrepôts',
-        '/zones': 'Zones de stockage',
-        '/produits': 'Produits',
-        '/utilisateurs': 'Utilisateurs'
+        '/tableau-de-bord':   'Tableau de bord',
+        '/entrepots':         'Entrepôts',
+        '/zones':             'Zones de stockage',
+        '/produits':          'Produits',
+        '/categories':        'Catégories',
+        '/fournisseurs':      'Fournisseurs',
+        '/stocks':            'Stocks',
+        '/mouvements-stock':  'Mouvements de stock',
+        '/bon-receptions':    'Bons de réception',
+        '/bon-sorties':       'Bons de sortie',
+        '/utilisateurs':      'Utilisateurs'
       }
-      return titres[this.$route.path] || 'StockMaster'
+      const path = this.$route.path
+      return titres[path] || titres[Object.keys(titres).find(k => path.startsWith(k + '/')) || ''] || 'StockMaster'
     },
     // Initiales de l'utilisateur connecté pour l'avatar
     initiales() {

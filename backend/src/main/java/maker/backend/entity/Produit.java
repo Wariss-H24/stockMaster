@@ -24,7 +24,10 @@ public class Produit {
     @NotBlank
     private String nom;
 
-    private String categorie;
+    @ManyToOne
+    @JoinColumn(name = "categorie_id")
+    private Categorie categorie;
+
     private String description;
 
     @Min(0)
@@ -36,6 +39,5 @@ public class Produit {
     private Double poids;
     private Double volume;
 
-    // Suppression logique : le produit reste en base mais n'est plus visible
     private boolean supprime = false;
 }

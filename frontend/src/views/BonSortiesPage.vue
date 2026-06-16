@@ -14,7 +14,7 @@
           </svg>
           <input v-model="recherche" placeholder="Rechercher par destination, entrepôt, statut..." />
         </div>
-        <button class="btn btn-primary" @click="ouvrirModal()">
+        <button v-if="peutEcrire" class="btn btn-primary" @click="ouvrirModal()">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
             <path d="M12 5v14M5 12h14" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/>
           </svg>
@@ -46,8 +46,8 @@
               <td>{{ formaterDate(b.date) }}</td>
               <td style="text-align:right;">
                 <button class="btn btn-outline btn-sm" @click="ouvrirModal(b)">Voir</button>
-                <button class="btn btn-primary btn-sm" @click="valider(b)" v-if="b.statut === 'BROUILLON'">Valider</button>
-                <button class="btn btn-danger btn-sm" @click="demanderSuppression(b)" v-if="b.statut === 'BROUILLON'">Supprimer</button>
+                <button v-if="peutEcrire && b.statut === 'BROUILLON'" class="btn btn-primary btn-sm" @click="valider(b)">Valider</button>
+                <button v-if="peutSupprimer && b.statut === 'BROUILLON'" class="btn btn-danger btn-sm" @click="demanderSuppression(b)">Supprimer</button>
               </td>
             </tr>
           </tbody>
@@ -55,21 +55,15 @@
       </div>
     </div>
 
-    <div class="modal-overlay" v-if="deleteModal" @click.self="annulerSuppression()">
-      <div class="modal small-modal">
-        <div class="modal-header">
-          <h3 class="modal-title">Confirmer la suppression</h3>
-        </div>
-        <div class="modal-body">
-          <p>Voulez-vous vraiment supprimer ce bon de sortie en brouillon ?</p>
-          <p v-if="toDelete"><strong>Id:</strong> {{ toDelete.id }} — <strong>Destination:</strong> {{ toDelete.destination }}</p>
-        </div>
-        <div class="modal-footer">
-          <button class="btn btn-outline" @click="annulerSuppression">Annuler</button>
-          <button class="btn btn-danger" @click="confirmerSuppression">Supprimer</button>
-        </div>
-      </div>
-    </div>
+    <ConfirmModal
+      v-if="confirm.visible"
+      titre="Supprimer le bon de sortie"
+      :message="`Voulez-vous supprimer le bon #${confirm.cible?.id} (${confirm.cible?.destination}) ? Cette action est irréversible.`"
+      type="danger"
+      label-confirmer="Supprimer"
+      @confirmer="confirmerSuppression"
+      @annuler="confirm.visible = false"
+    />
 
     <div class="modal-overlay" v-if="modal" @click.self="modal = false">
       <div class="modal large-modal">
@@ -129,19 +123,23 @@
 
 <script>
 import { sortieApi, entrepotApi, produitApi } from '../services/api.js'
+import { authStore } from '../services/authStore.js'
+import ConfirmModal from '../components/ConfirmModal.vue'
 
 export default {
   name: 'BonSortiesPage',
+  components: { ConfirmModal },
   data() {
     return {
       liste: [], entrepots: [], produits: [], recherche: '', chargement: true,
       modal: false, erreur: '',
       form: { id: null, entrepotId: '', destination: '', commentaire: '', lignes: [] },
-      deleteModal: false,
-      toDelete: null
+      confirm: { visible: false, cible: null }
     }
   },
   computed: {
+    peutEcrire()    { return authStore.aUnRole('ADMIN', 'GESTIONNAIRE') },
+    peutSupprimer() { return authStore.aUnRole('ADMIN', 'GESTIONNAIRE') },
     listeFiltree() {
       const q = this.recherche.toLowerCase()
       if (!q) return this.liste
@@ -203,29 +201,26 @@ export default {
         await sortieApi.valider(bon.id)
         await this.charger()
       } catch (e) {
-        alert(e.response?.data?.message || 'Impossible de valider le bon.')
+        this.erreur = e.response?.data?.message || 'Impossible de valider le bon.'
       }
     },
     demanderSuppression(bon) {
-      this.toDelete = bon
-      this.deleteModal = true
-    },
-    annulerSuppression() {
-      this.toDelete = null
-      this.deleteModal = false
+      this.confirm = { visible: true, cible: bon }
     },
     async confirmerSuppression() {
       try {
-        await sortieApi.supprimer(this.toDelete.id)
-        this.annulerSuppression()
+        await sortieApi.supprimer(this.confirm.cible.id)
+        this.confirm = { visible: false, cible: null }
         await this.charger()
       } catch (e) {
-        this.annulerSuppression()
-        alert(e.response?.data?.message || 'Impossible de supprimer le bon.')
+        this.confirm = { visible: false, cible: null }
+        this.erreur = e.response?.data?.message || 'Impossible de supprimer le bon.'
       }
     },
     formaterDate(date) {
-      return new Date(date).toLocaleString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric' })
+      if (!date) return '—'
+      const d = new Date(date)
+      return isNaN(d) ? '—' : d.toLocaleString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric' })
     }
   }
 }

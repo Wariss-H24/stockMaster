@@ -43,6 +43,11 @@ public class BonReceptionService {
         return repo.findAll().stream().map(this::toDTO).collect(Collectors.toList());
     }
 
+    public List<BonReceptionDTO> findByFournisseurId(Long fournisseurId) {
+        return repo.findByFournisseurIdOrderByDateDesc(fournisseurId)
+                .stream().map(this::toDTO).collect(Collectors.toList());
+    }
+
     public BonReceptionDTO findById(Long id) {
         return repo.findById(id).map(this::toDTO)
                 .orElseThrow(() -> new ResourceNotFoundException("Bon de réception introuvable : " + id));

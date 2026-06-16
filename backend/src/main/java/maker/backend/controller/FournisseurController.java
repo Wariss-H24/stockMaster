@@ -1,7 +1,9 @@
 package maker.backend.controller;
 
 import jakarta.validation.Valid;
+import maker.backend.dto.BonReceptionDTO;
 import maker.backend.dto.FournisseurDTO;
+import maker.backend.service.BonReceptionService;
 import maker.backend.service.FournisseurService;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -15,9 +17,11 @@ import java.util.List;
 public class FournisseurController {
 
     private final FournisseurService service;
+    private final BonReceptionService bonReceptionService;
 
-    public FournisseurController(FournisseurService service) {
+    public FournisseurController(FournisseurService service, BonReceptionService bonReceptionService) {
         this.service = service;
+        this.bonReceptionService = bonReceptionService;
     }
 
     @GetMapping
@@ -28,6 +32,11 @@ public class FournisseurController {
     @GetMapping("/{id}")
     public FournisseurDTO obtenir(@PathVariable Long id) {
         return service.findById(id);
+    }
+
+    @GetMapping("/{id}/livraisons")
+    public List<BonReceptionDTO> livraisons(@PathVariable Long id) {
+        return bonReceptionService.findByFournisseurId(id);
     }
 
     @PostMapping

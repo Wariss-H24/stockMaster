@@ -6,7 +6,7 @@ import lombok.Data;
 
 @Entity
 @Table(name = "stocks", uniqueConstraints = {
-    @UniqueConstraint(columnNames = {"produit_id", "entrepot_id"})
+    @UniqueConstraint(columnNames = {"produit_id", "entrepot_id", "zone_id"})
 })
 @Data
 public class Stock {

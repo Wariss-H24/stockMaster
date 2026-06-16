@@ -42,6 +42,10 @@
               <td>{{ f.email || '—' }}</td>
               <td>{{ f.contactPrincipal || '—' }}</td>
               <td style="text-align:right;">
+                <button class="btn btn-outline btn-sm" @click="voirLivraisons(f)">
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none"><path d="M4 6h16M4 10h16M4 14h8" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+                  Livraisons
+                </button>
                 <button class="btn btn-outline btn-sm" @click="ouvrirModal(f)">Éditer</button>
                 <button class="btn btn-danger btn-sm" @click="demanderDesactivation(f)" v-if="f.actif">Désactiver</button>
               </td>
@@ -100,6 +104,42 @@
       @confirmer="confirmerDesactivation"
       @annuler="confirm.visible = false"
     />
+
+    <!-- Panneau historique livraisons -->
+    <div class="modal-overlay" v-if="historiqueModal" @click.self="historiqueModal = false">
+      <div class="modal" style="max-width:700px;">
+        <div class="modal-header">
+          <h3 class="modal-title">Livraisons — {{ fournisseurCourant?.nom }}</h3>
+          <button class="modal-close" @click="historiqueModal = false">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M6 6l12 12M18 6L6 18" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+          </button>
+        </div>
+        <div class="modal-body">
+          <div v-if="chargementLivraisons" style="text-align:center;padding:24px;color:var(--gray-400);">Chargement...</div>
+          <div v-else-if="livraisons.length === 0" style="text-align:center;padding:24px;color:var(--gray-400);">Aucune livraison enregistrée.</div>
+          <div class="table-wrap" v-else>
+            <table>
+              <thead>
+                <tr><th>#</th><th>Entrepôt</th><th>Zone</th><th>Statut</th><th>Date</th><th>Lignes</th></tr>
+              </thead>
+              <tbody>
+                <tr v-for="b in livraisons" :key="b.id">
+                  <td><code style="font-size:.78rem;">{{ b.id }}</code></td>
+                  <td>{{ b.entrepotNom }}</td>
+                  <td>{{ b.zoneNom || '—' }}</td>
+                  <td><span class="badge" :class="b.statut === 'VALIDE' ? 'badge-success' : 'badge-warning'">{{ b.statut }}</span></td>
+                  <td>{{ formaterDate(b.date) }}</td>
+                  <td>{{ b.lignes?.length ?? 0 }}</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-outline" @click="historiqueModal = false">Fermer</button>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -115,7 +155,8 @@ export default {
     return {
       liste: [], recherche: '', chargement: true,
       modal: false, erreur: '', confirm: { visible: false, cible: null },
-      form: { id: null, nom: '', telephone: '', email: '', contactPrincipal: '', actif: true }
+      form: { id: null, nom: '', telephone: '', email: '', contactPrincipal: '', actif: true },
+      historiqueModal: false, fournisseurCourant: null, livraisons: [], chargementLivraisons: false
     }
   },
   computed: {
@@ -163,6 +204,19 @@ export default {
       await fournisseurApi.desactiver(this.confirm.cible.id)
       this.confirm = { visible: false, cible: null }
       await this.charger()
+    },
+    async voirLivraisons(f) {
+      this.fournisseurCourant = f
+      this.livraisons = []
+      this.historiqueModal = true
+      this.chargementLivraisons = true
+      try { const res = await fournisseurApi.livraisons(f.id); this.livraisons = res.data }
+      finally { this.chargementLivraisons = false }
+    },
+    formaterDate(date) {
+      if (!date) return '—'
+      const d = new Date(date)
+      return isNaN(d) ? '—' : d.toLocaleString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric' })
     }
   }
 }
