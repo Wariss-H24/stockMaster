@@ -6,6 +6,12 @@ import UtilisateursPage from '../views/UtilisateursPage.vue'
 import EntrepotsPage from '../views/EntrepotsPage.vue'
 import ZonesPage from '../views/ZonesPage.vue'
 import ProduitsPage from '../views/ProduitsPage.vue'
+import CategoriesPage from '../views/CategoriesPage.vue'
+import FournisseursPage from '../views/FournisseursPage.vue'
+import StocksPage from '../views/StocksPage.vue'
+import MouvementsStockPage from '../views/MouvementsStockPage.vue'
+import BonReceptionsPage from '../views/BonReceptionsPage.vue'
+import BonSortiesPage from '../views/BonSortiesPage.vue'
 
 const routes = [
   // Page publique
@@ -17,6 +23,12 @@ const routes = [
   { path: '/entrepots',   component: EntrepotsPage,   meta: { requiertAuth: true } },
   { path: '/zones',       component: ZonesPage,       meta: { requiertAuth: true } },
   { path: '/produits',    component: ProduitsPage,     meta: { requiertAuth: true } },
+  { path: '/categories',  component: CategoriesPage,  meta: { requiertAuth: true } },
+  { path: '/fournisseurs',component: FournisseursPage,meta: { requiertAuth: true } },
+  { path: '/stocks',      component: StocksPage,      meta: { requiertAuth: true } },
+  { path: '/mouvements-stock', component: MouvementsStockPage, meta: { requiertAuth: true } },
+  { path: '/bon-receptions', component: BonReceptionsPage, meta: { requiertAuth: true } },
+  { path: '/bon-sorties', component: BonSortiesPage, meta: { requiertAuth: true } },
 
   // Page réservée à l'ADMIN
   {

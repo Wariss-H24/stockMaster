@@ -62,6 +62,44 @@
           </svg>
           <span>Produits</span>
         </router-link>
+        <router-link to="/categories" class="nav-item" @click="sidebarOuverte = false">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+            <path d="M4 6h16M4 12h16M4 18h16" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+          </svg>
+          <span>Catégories</span>
+        </router-link>
+        <router-link to="/fournisseurs" class="nav-item" @click="sidebarOuverte = false">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+            <path d="M12 4a4 4 0 110 8 4 4 0 010-8z" stroke="currentColor" stroke-width="1.8"/>
+            <path d="M6 20v-2a4 4 0 014-4h4a4 4 0 014 4v2" stroke="currentColor" stroke-width="1.8"/>
+          </svg>
+          <span>Fournisseurs</span>
+        </router-link>
+        <router-link to="/stocks" class="nav-item" @click="sidebarOuverte = false">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+            <path d="M4 7h16M4 12h16M4 17h16" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+          </svg>
+          <span>Stocks</span>
+        </router-link>
+        <router-link to="/mouvements-stock" class="nav-item" @click="sidebarOuverte = false">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+            <path d="M5 12h14M12 5l7 7-7 7" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+          <span>Mouvements</span>
+        </router-link>
+        <router-link to="/bon-receptions" class="nav-item" @click="sidebarOuverte = false">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+            <path d="M4 6h16M4 10h16M4 14h8" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+          </svg>
+          <span>Bons réception</span>
+        </router-link>
+        <router-link to="/bon-sorties" class="nav-item" @click="sidebarOuverte = false">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+            <path d="M4 6h16M4 12h16M4 18h8" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+            <path d="M19 8v8" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+          </svg>
+          <span>Bons sortie</span>
+        </router-link>
 
         <!-- Section Admin : visible seulement pour ADMIN -->
         <template v-if="auth.aRole('ADMIN')">

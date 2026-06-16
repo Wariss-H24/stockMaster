@@ -70,3 +70,48 @@ export const produitApi = {
   modifier: (id, dto) => api.put(`/produits/${id}`, dto),
   supprimer: (id) => api.delete(`/produits/${id}`)
 }
+
+export const categoryApi = {
+  findAll: () => api.get('/categories'),
+  findById: (id) => api.get(`/categories/${id}`),
+  creer: (dto) => api.post('/categories', dto),
+  modifier: (id, dto) => api.put(`/categories/${id}`, dto),
+  desactiver: (id) => api.delete(`/categories/${id}`)
+}
+
+export const fournisseurApi = {
+  findAll: () => api.get('/fournisseurs'),
+  findById: (id) => api.get(`/fournisseurs/${id}`),
+  creer: (dto) => api.post('/fournisseurs', dto),
+  modifier: (id, dto) => api.put(`/fournisseurs/${id}`, dto),
+  desactiver: (id) => api.delete(`/fournisseurs/${id}`)
+}
+
+export const stockApi = {
+  findAll: () => api.get('/stocks'),
+  findById: (id) => api.get(`/stocks/${id}`)
+}
+
+export const mouvementStockApi = {
+  findAll: () => api.get('/mouvements-stock'),
+  findByType: (type) => api.get(`/mouvements-stock/type/${type}`),
+  findByStockId: (stockId) => api.get(`/mouvements-stock/stock/${stockId}`)
+}
+
+export const receptionApi = {
+  findAll: () => api.get('/bon-receptions'),
+  findById: (id) => api.get(`/bon-receptions/${id}`),
+  creer: (dto) => api.post('/bon-receptions', dto),
+  modifier: (id, dto) => api.put(`/bon-receptions/${id}`, dto),
+  valider: (id) => api.post(`/bon-receptions/${id}/valider`),
+  supprimer: (id) => api.delete(`/bon-receptions/${id}`)
+}
+
+export const sortieApi = {
+  findAll: () => api.get('/bon-sorties'),
+  findById: (id) => api.get(`/bon-sorties/${id}`),
+  creer: (dto) => api.post('/bon-sorties', dto),
+  modifier: (id, dto) => api.put(`/bon-sorties/${id}`, dto),
+  valider: (id) => api.post(`/bon-sorties/${id}/valider`),
+  supprimer: (id) => api.delete(`/bon-sorties/${id}`)
+}

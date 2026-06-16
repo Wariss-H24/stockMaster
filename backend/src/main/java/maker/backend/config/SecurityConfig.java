@@ -73,14 +73,18 @@ public class SecurityConfig {
                 // --- Gestion des utilisateurs : ADMIN seulement ---
                 .requestMatchers("/api/utilisateurs/**").hasRole("ADMIN")
 
-                // --- Lecture : tous les rôles connectés ---
+                // --- Lecture : tous les rôles connectés (ou authentifiés pour stocks/mouvements) ---
+                .requestMatchers(HttpMethod.GET, "/api/stocks/**").authenticated()
+                .requestMatchers(HttpMethod.GET, "/api/mouvements-stock/**").authenticated()
                 .requestMatchers(HttpMethod.GET, "/api/**").hasAnyRole("ADMIN", "GESTIONNAIRE", "MAGASINIER", "AUDITEUR")
 
                 // --- Création et modification : ADMIN + GESTIONNAIRE ---
                 .requestMatchers(HttpMethod.POST, "/api/**").hasAnyRole("ADMIN", "GESTIONNAIRE")
                 .requestMatchers(HttpMethod.PUT, "/api/**").hasAnyRole("ADMIN", "GESTIONNAIRE")
 
-                // --- Suppression / désactivation : ADMIN seulement ---
+                // --- Suppression / désactivation : ADMIN seulement, sauf bons en brouillon pour GESTIONNAIRE
+                .requestMatchers(HttpMethod.DELETE, "/api/bon-receptions/**").hasAnyRole("ADMIN", "GESTIONNAIRE")
+                .requestMatchers(HttpMethod.DELETE, "/api/bon-sorties/**").hasAnyRole("ADMIN", "GESTIONNAIRE")
                 .requestMatchers(HttpMethod.DELETE, "/api/**").hasRole("ADMIN")
 
                 // Tout le reste : authentifié
