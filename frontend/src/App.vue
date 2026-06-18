@@ -100,6 +100,14 @@
           </svg>
           <span>Bons sortie</span>
         </router-link>
+        <router-link v-if="auth.aUnRole('ADMIN', 'GESTIONNAIRE')" to="/transferts" class="nav-item" @click="sidebarOuverte = false">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+            <path d="M4 12h7" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+            <path d="M13 6l5 6-5 6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+            <path d="M21 7v10" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+          </svg>
+          <span>Transferts</span>
+        </router-link>
 
         <!-- Section Admin : visible seulement pour ADMIN -->
         <template v-if="auth.aRole('ADMIN')">
@@ -179,6 +187,7 @@ export default {
         '/mouvements-stock':  'Mouvements de stock',
         '/bon-receptions':    'Bons de réception',
         '/bon-sorties':       'Bons de sortie',
+        '/transferts':        'Transferts',
         '/utilisateurs':      'Utilisateurs'
       }
       const path = this.$route.path

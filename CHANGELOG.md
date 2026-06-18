@@ -65,7 +65,7 @@ La contrainte unique était définie sur `(produit_id, entrepot_id)` uniquement.
 **Fichier :** `backend/src/main/java/maker/backend/service/BonSortieService.java`
 
 **Problème :**  
-La méthode `appliquerSortie()` convertissait inutilement les entités `SortieLigne` en `SortieLigneDTO` via `stream().map(this::toDTO)` avant de les retraiter, ce qui ajoutait une conversion inutile.
+La méthode `appliquerSortie()` convertissait inutilement les entités `SortieLigne` en `SortieLigneDTO` via `stream().map(this::toDTO)`avant de les retraiter, ce qui ajoutait une conversion inutile.
 
 **Correction :**
 - Itération directe sur `bon.getLignes()` (entités `SortieLigne`)

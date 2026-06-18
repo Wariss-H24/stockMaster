@@ -12,6 +12,7 @@ import StocksPage from '../views/StocksPage.vue'
 import MouvementsStockPage from '../views/MouvementsStockPage.vue'
 import BonReceptionsPage from '../views/BonReceptionsPage.vue'
 import BonSortiesPage from '../views/BonSortiesPage.vue'
+import TransfertsPage from '../views/TransfertsPage.vue'
 
 const routes = [
   // Page publique
@@ -29,6 +30,7 @@ const routes = [
   { path: '/mouvements-stock', component: MouvementsStockPage, meta: { requiertAuth: true } },
   { path: '/bon-receptions', component: BonReceptionsPage, meta: { requiertAuth: true } },
   { path: '/bon-sorties', component: BonSortiesPage, meta: { requiertAuth: true } },
+  { path: '/transferts', component: TransfertsPage, meta: { requiertAuth: true, roles: ['ADMIN', 'GESTIONNAIRE'] } },
 
   // Page réservée à l'ADMIN
   {

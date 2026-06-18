@@ -102,3 +102,7 @@ export const sortieApi = {
   valider:  (id)      => api.post(`/bon-sorties/${id}/valider`),
   supprimer:(id)      => api.delete(`/bon-sorties/${id}`)
 }
+
+export const transfertApi = {
+  creer: (dto) => api.post('/transferts', dto)
+}

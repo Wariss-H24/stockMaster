@@ -65,6 +65,31 @@
       @annuler="confirm.visible = false"
     />
 
+    <!-- Toast erreur auto-fermant -->
+    <transition name="toast-slide">
+      <div v-if="toast.visible" class="toast-error">
+        <div class="toast-icon">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+            <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="1.8"/>
+            <line x1="12" y1="8" x2="12" y2="12" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+            <line x1="12" y1="16" x2="12.01" y2="16" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/>
+          </svg>
+        </div>
+        <div class="toast-body">
+          <p class="toast-title">Erreur</p>
+          <p class="toast-message">{{ toast.message }}</p>
+          <div class="toast-progress">
+            <div class="toast-progress-bar" :style="{ animationDuration: toast.duree + 'ms' }"></div>
+          </div>
+        </div>
+        <button class="toast-close" @click="fermerToast">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
+            <path d="M6 6l12 12M18 6L6 18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+          </svg>
+        </button>
+      </div>
+    </transition>
+
     <div class="modal-overlay" v-if="modal" @click.self="modal = false">
       <div class="modal large-modal">
         <div class="modal-header">
@@ -134,7 +159,8 @@ export default {
       liste: [], entrepots: [], produits: [], recherche: '', chargement: true,
       modal: false, erreur: '',
       form: { id: null, entrepotId: '', destination: '', commentaire: '', lignes: [] },
-      confirm: { visible: false, cible: null }
+      confirm: { visible: false, cible: null },
+      toast: { visible: false, message: '', duree: 10000, _timer: null }
     }
   },
   computed: {
@@ -154,7 +180,19 @@ export default {
   async mounted() {
     await Promise.all([this.charger(), this.chargerDonnees()])
   },
+  beforeUnmount() {
+    clearTimeout(this.toast._timer)
+  },
   methods: {
+    afficherToast(message, duree = 10000) {
+      clearTimeout(this.toast._timer)
+      this.toast = { visible: true, message, duree, _timer: null }
+      this.toast._timer = setTimeout(() => { this.toast.visible = false }, duree)
+    },
+    fermerToast() {
+      clearTimeout(this.toast._timer)
+      this.toast.visible = false
+    },
     async charger() {
       this.chargement = true
       try { const res = await sortieApi.findAll(); this.liste = res.data } finally { this.chargement = false }
@@ -201,7 +239,8 @@ export default {
         await sortieApi.valider(bon.id)
         await this.charger()
       } catch (e) {
-        this.erreur = e.response?.data?.message || 'Impossible de valider le bon.'
+        const msg = e.response?.data?.message || 'Impossible de valider le bon.'
+        this.afficherToast(msg)
       }
     },
     demanderSuppression(bon) {
@@ -214,7 +253,7 @@ export default {
         await this.charger()
       } catch (e) {
         this.confirm = { visible: false, cible: null }
-        this.erreur = e.response?.data?.message || 'Impossible de supprimer le bon.'
+        this.afficherToast(e.response?.data?.message || 'Impossible de supprimer le bon.')
       }
     },
     formaterDate(date) {
@@ -234,4 +273,46 @@ export default {
 .line-row { margin-bottom: 14px; padding-bottom: 14px; border-bottom: 1px solid var(--gray-200); }
 .line-row:last-child { margin-bottom: 0; border-bottom: none; }
 .align-end { align-items: flex-end; }
+
+  /* ── Toast erreur ── */
+  .toast-error {
+    position: fixed;
+    top: 24px;
+    right: 24px;
+    z-index: 9999;
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    background: #fff;
+    border: 1px solid #fca5a5;
+    border-left: 4px solid var(--danger);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow-lg);
+    padding: 16px 14px 12px 16px;
+    max-width: 420px;
+    min-width: 300px;
+  }
+  .toast-icon { color: var(--danger); flex-shrink: 0; margin-top: 1px; }
+  .toast-body { flex: 1; min-width: 0; }
+  .toast-title { font-weight: 700; font-size: .88rem; color: var(--danger); margin-bottom: 3px; }
+  .toast-message { font-size: .83rem; color: var(--gray-700); line-height: 1.4; }
+  .toast-close {
+    background: none; border: none; cursor: pointer;
+    color: var(--gray-400); padding: 2px; flex-shrink: 0;
+    border-radius: 4px; display:flex; align-items:center;
+  }
+  .toast-close:hover { color: var(--gray-700); background: var(--gray-100); }
+  .toast-progress { margin-top: 8px; height: 3px; background: var(--danger-bg); border-radius: 999px; overflow: hidden; }
+  .toast-progress-bar {
+    height: 100%;
+    background: var(--danger);
+    border-radius: 999px;
+    width: 100%;
+    animation: toast-drain linear forwards;
+  }
+  @keyframes toast-drain { from { width: 100%; } to { width: 0%; } }
+  .toast-slide-enter-active { transition: all .25s ease; }
+  .toast-slide-leave-active { transition: all .2s ease; }
+  .toast-slide-enter-from { opacity: 0; transform: translateX(40px); }
+  .toast-slide-leave-to   { opacity: 0; transform: translateX(40px); }
 </style>
