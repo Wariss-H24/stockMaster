@@ -103,6 +103,11 @@ public class BonSortieService {
             stock.setQuantiteDisponible(stock.getQuantiteDisponible() - ligne.getQuantite());
             stockService.save(stock);
 
+            // Recalcul capacite zone si applicable
+            if (stock.getZone() != null) {
+                stockService.recalculerCapaciteZone(stock.getZone());
+            }
+
             MouvementStock mouvement = new MouvementStock();
             mouvement.setStock(stock);
             mouvement.setType(MouvementStock.Type.SORTIE);
@@ -111,6 +116,7 @@ public class BonSortieService {
             mouvement.setCommentaire("Sortie validée");
             mouvementService.enregistrer(mouvement);
         }
+        stockService.recalculerCapaciteEntrepot(bon.getEntrepot());
     }
 
     private String generateReference() {

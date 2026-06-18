@@ -28,7 +28,7 @@
           <thead>
             <tr>
               <th>Nom</th><th>Adresse</th><th>Responsable</th>
-              <th>Occupation</th><th>Statut</th>
+              <th>Capacité totale</th><th>Occupation</th><th>Statut</th>
               <th v-if="peutEcrire || peutSupprimer" style="text-align:right;">Actions</th>
             </tr>
           </thead>
@@ -43,6 +43,7 @@
               <td><span style="font-weight:600;color:var(--gray-900);">{{ e.nom }}</span></td>
               <td style="color:var(--gray-500);font-size:.82rem;">{{ e.adresse }}</td>
               <td>{{ e.responsable || '—' }}</td>
+              <td style="font-size:.82rem;color:var(--gray-500);">{{ e.capaciteUtilisee ?? 0 }} / {{ e.capaciteTotale ?? '∞' }}</td>
               <td style="min-width:160px;">
                 <div style="display:flex;align-items:center;gap:8px;">
                   <div class="progress-bar">
@@ -114,10 +115,6 @@
               <label class="form-label">Capacité totale</label>
               <input class="form-input" type="number" v-model.number="form.capaciteTotale" min="0" />
             </div>
-            <div class="form-group">
-              <label class="form-label">Capacité utilisée</label>
-              <input class="form-input" type="number" v-model.number="form.capaciteUtilisee" min="0" />
-            </div>
           </div>
           <label class="form-check">
             <input type="checkbox" v-model="form.actif" />
@@ -157,7 +154,7 @@ export default {
     return {
       liste: [], chargement: true, modal: false, erreur: '', recherche: '',
       confirm: { visible: false, cible: null },
-      form: { id: null, nom: '', adresse: '', responsable: '', capaciteTotale: 0, capaciteUtilisee: 0, actif: true }
+      form: { id: null, nom: '', adresse: '', responsable: '', capaciteTotale: 0, actif: true }
     }
   },
   computed: {
@@ -184,7 +181,7 @@ export default {
     },
     ouvrirModal(e = null) {
       this.erreur = ''
-      this.form = e ? { ...e } : { id: null, nom: '', adresse: '', responsable: '', capaciteTotale: 0, capaciteUtilisee: 0, actif: true }
+      this.form = e ? { ...e } : { id: null, nom: '', adresse: '', responsable: '', capaciteTotale: 0, actif: true }
       this.modal = true
     },
     async sauvegarder() {

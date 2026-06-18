@@ -46,7 +46,6 @@ public class EntrepotService {
         existing.setAdresse(dto.getAdresse());
         existing.setResponsable(dto.getResponsable());
         existing.setCapaciteTotale(dto.getCapaciteTotale());
-        existing.setCapaciteUtilisee(dto.getCapaciteUtilisee());
         existing.setActif(dto.isActif());
         return mapper.toDTO(repo.save(existing));
     }

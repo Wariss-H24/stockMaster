@@ -40,6 +40,9 @@ public class ZoneFrService {
     public ZoneFrDTO creer(ZoneFrDTO dto) {
         Entrepot entrepot = entrepotRepo.findById(dto.getEntrepotId())
                 .orElseThrow(() -> new ResourceNotFoundException("Entrepôt introuvable : " + dto.getEntrepotId()));
+
+        verifierCapaciteEntrepot(entrepot, null, dto.getCapaciteTotale());
+
         ZoneFr z = mapper.toEntity(dto, entrepot);
         return mapper.toDTO(repo.save(z));
     }
@@ -49,19 +52,48 @@ public class ZoneFrService {
                 .orElseThrow(() -> new ResourceNotFoundException("Zone introuvable : " + id));
         Entrepot entrepot = entrepotRepo.findById(dto.getEntrepotId())
                 .orElseThrow(() -> new ResourceNotFoundException("Entrepôt introuvable : " + dto.getEntrepotId()));
+
+        verifierCapaciteEntrepot(entrepot, id, dto.getCapaciteTotale());
+
         existing.setNom(dto.getNom());
         existing.setEntrepot(entrepot);
         existing.setCapaciteTotale(dto.getCapaciteTotale());
-        existing.setCapaciteUtilisee(dto.getCapaciteUtilisee());
         existing.setActif(dto.isActif());
         return mapper.toDTO(repo.save(existing));
     }
 
-    // Désactivation logique
     public void desactiver(Long id) {
         ZoneFr z = repo.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Zone introuvable : " + id));
         z.setActif(false);
         repo.save(z);
+    }
+
+    /**
+     * Vérifie que la somme des capacités totales des zones actives de l'entrepôt
+     * (en excluant éventuellement la zone en cours de modification) ne dépasse pas
+     * la capacité totale de l'entrepôt.
+     *
+     * @param entrepot       l'entrepôt cible
+     * @param zoneIdExclure  ID de la zone à exclure du calcul (modification), null pour une création
+     * @param nouvelleCapacite capacité totale de la zone à créer/modifier
+     */
+    private void verifierCapaciteEntrepot(Entrepot entrepot, Long zoneIdExclure, Integer nouvelleCapacite) {
+        if (entrepot.getCapaciteTotale() == null || entrepot.getCapaciteTotale() == 0) return;
+        if (nouvelleCapacite == null || nouvelleCapacite == 0) return;
+
+        int sommeExistantes = repo.findByEntrepotIdAndActifTrue(entrepot.getId()).stream()
+                .filter(z -> !z.getId().equals(zoneIdExclure))
+                .mapToInt(z -> z.getCapaciteTotale() != null ? z.getCapaciteTotale() : 0)
+                .sum();
+
+        int total = sommeExistantes + nouvelleCapacite;
+        if (total > entrepot.getCapaciteTotale()) {
+            throw new IllegalArgumentException(
+                "Capacité dépassée : la somme des capacités des zones (" + total +
+                ") dépasse la capacité totale de l'entrepôt « " + entrepot.getNom() +
+                " » (" + entrepot.getCapaciteTotale() + ")."
+            );
+        }
     }
 }

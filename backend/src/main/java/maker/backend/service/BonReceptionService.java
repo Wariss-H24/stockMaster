@@ -104,6 +104,10 @@ public class BonReceptionService {
 
     private void appliquerReception(BonReception bon) {
         for (ReceptionLigne ligne : bon.getLignes()) {
+            // Vérifier la capacité avant d'ajouter
+            stockService.verifierCapaciteDisponible(
+                bon.getEntrepot(), bon.getZone(), ligne.getProduit(), ligne.getQuantite());
+
             Stock stock = stockService.findOrCreateStock(
                     ligne.getProduit().getId(), bon.getEntrepot().getId(), bon.getZone() != null ? bon.getZone().getId() : null);
             stock.setQuantiteDisponible(stock.getQuantiteDisponible() + ligne.getQuantite());
@@ -117,6 +121,9 @@ public class BonReceptionService {
             mouvement.setCommentaire("Réception validée");
             mouvementService.enregistrer(mouvement);
         }
+        // Recalcul des capacités utilisées après réception
+        stockService.recalculerCapaciteZone(bon.getZone());
+        stockService.recalculerCapaciteEntrepot(bon.getEntrepot());
     }
 
     private BonReceptionDTO toDTO(BonReception bon) {

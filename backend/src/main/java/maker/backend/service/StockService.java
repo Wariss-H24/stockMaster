@@ -16,6 +16,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 @Service
 @Transactional
@@ -82,5 +83,44 @@ public class StockService {
 
     public Stock save(Stock stock) {
         return repo.save(stock);
+    }
+
+    public void recalculerCapaciteZone(ZoneFr zone) {
+        if (zone == null) return;
+        int utilise = (int) Math.round(repo.sumEspaceUtiliseByZone(zone));
+        zone.setCapaciteUtilisee(utilise);
+        zoneRepo.save(zone);
+    }
+
+    public void recalculerCapaciteEntrepot(Entrepot entrepot) {
+        int utilise = (int) Math.round(repo.sumEspaceUtiliseByEntrepot(entrepot));
+        entrepot.setCapaciteUtilisee(utilise);
+        entrepotRepo.save(entrepot);
+    }
+
+    /**
+     * Vérifie que l'ajout de (quantite * volume) ne dépasse pas la capacité de la zone et de l'entrepôt.
+     */
+    public void verifierCapaciteDisponible(Entrepot entrepot, ZoneFr zone, Produit produit, int quantite) {
+        if (produit.getVolume() == null || produit.getVolume() == 0) return;
+        double espaceAjouter = quantite * produit.getVolume();
+
+        if (zone != null && zone.getCapaciteTotale() != null && zone.getCapaciteTotale() > 0) {
+            double utiliseZone = repo.sumEspaceUtiliseByZone(zone);
+            if (utiliseZone + espaceAjouter > zone.getCapaciteTotale()) {
+                throw new IllegalArgumentException(
+                    "Capacité de la zone « " + zone.getNom() + " » dépassée. Disponible : "
+                    + (int)(zone.getCapaciteTotale() - utiliseZone) + " / Requis : " + (int) Math.ceil(espaceAjouter));
+            }
+        }
+
+        if (entrepot.getCapaciteTotale() != null && entrepot.getCapaciteTotale() > 0) {
+            double utiliseEntrepot = repo.sumEspaceUtiliseByEntrepot(entrepot);
+            if (utiliseEntrepot + espaceAjouter > entrepot.getCapaciteTotale()) {
+                throw new IllegalArgumentException(
+                    "Capacité de l'entrepôt « " + entrepot.getNom() + " » dépassée. Disponible : "
+                    + (int)(entrepot.getCapaciteTotale() - utiliseEntrepot) + " / Requis : " + (int) Math.ceil(espaceAjouter));
+            }
+        }
     }
 }
