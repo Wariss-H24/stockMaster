@@ -1,93 +1,197 @@
 package maker.backend.service;
 
 import maker.backend.dto.TransfertDTO;
-import maker.backend.entity.Entrepot;
-import maker.backend.entity.MouvementStock;
-import maker.backend.entity.Produit;
-import maker.backend.entity.Stock;
-import maker.backend.entity.ZoneFr;
+import maker.backend.entity.*;
 import maker.backend.exception.ResourceNotFoundException;
-import maker.backend.repository.EntrepotRepository;
-import maker.backend.repository.ProduitRepository;
-import maker.backend.repository.ZoneFrRepository;
+import maker.backend.mapper.TransfertMapper;
+import maker.backend.repository.*;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.Objects;
+import java.time.LocalDateTime;
+import java.util.List;
+import java.util.stream.Collectors;
 
+/**
+ * Module 10 — Gestion des transferts inter-entrepôts.
+ *
+ * Cycle de vie :
+ *   creer()    → BROUILLON  (aucun mouvement de stock)
+ *   expedier() → EXPEDIE    (stock source débité + quantiteTransit++ à destination)
+ *   recevoir() → RECU       (quantiteTransit-- + quantiteDisponible++ à destination)
+ *   annuler()  → ANNULE     (seulement depuis BROUILLON)
+ */
 @Service
 @Transactional
 public class TransfertService {
 
+    private final TransfertRepository transfertRepo;
     private final EntrepotRepository entrepotRepo;
     private final ZoneFrRepository zoneRepo;
     private final ProduitRepository produitRepo;
+    private final UtilisateurRepository userRepo;
     private final StockService stockService;
     private final MouvementStockService mouvementService;
+    private final TransfertMapper mapper;
 
-    public TransfertService(EntrepotRepository entrepotRepo,
+    public TransfertService(TransfertRepository transfertRepo,
+                            EntrepotRepository entrepotRepo,
                             ZoneFrRepository zoneRepo,
                             ProduitRepository produitRepo,
+                            UtilisateurRepository userRepo,
                             StockService stockService,
-                            MouvementStockService mouvementService) {
-        this.entrepotRepo = entrepotRepo;
-        this.zoneRepo = zoneRepo;
-        this.produitRepo = produitRepo;
-        this.stockService = stockService;
+                            MouvementStockService mouvementService,
+                            TransfertMapper mapper) {
+        this.transfertRepo  = transfertRepo;
+        this.entrepotRepo   = entrepotRepo;
+        this.zoneRepo       = zoneRepo;
+        this.produitRepo    = produitRepo;
+        this.userRepo       = userRepo;
+        this.stockService   = stockService;
         this.mouvementService = mouvementService;
+        this.mapper         = mapper;
     }
 
-    public void transferer(TransfertDTO dto) {
-        if (dto.getSourceEntrepotId().equals(dto.getDestinationEntrepotId()) &&
-                Objects.equals(dto.getSourceZoneId(), dto.getDestinationZoneId())) {
-            throw new IllegalArgumentException("La source et la destination du transfert doivent être différentes.");
-        }
+    // --- Lecture ---
 
-        Entrepot sourceEntrepot = findEntrepot(dto.getSourceEntrepotId());
-        ZoneFr sourceZone = findZone(dto.getSourceZoneId(), sourceEntrepot);
-        Entrepot destinationEntrepot = findEntrepot(dto.getDestinationEntrepotId());
-        ZoneFr destinationZone = findZone(dto.getDestinationZoneId(), destinationEntrepot);
+    public List<TransfertDTO> findAll() {
+        return transfertRepo.findAllByOrderByDateCreaDesc()
+                .stream().map(mapper::toDTO).collect(Collectors.toList());
+    }
+
+    public TransfertDTO findById(Long id) {
+        return transfertRepo.findById(id)
+                .map(mapper::toDTO)
+                .orElseThrow(() -> new ResourceNotFoundException("Transfert introuvable : " + id));
+    }
+
+    // --- Création (état BROUILLON) ---
+
+    public TransfertDTO creer(TransfertDTO dto, String usernameCreateur) {
+        Entrepot source = findEntrepot(dto.getEntrepotSourceId());
+        Entrepot dest   = findEntrepot(dto.getEntrepotDestinationId());
+        ZoneFr zSource  = dto.getZoneSourceId() != null ? findZone(dto.getZoneSourceId(), source) : null;
+        ZoneFr zDest    = dto.getZoneDestinationId() != null ? findZone(dto.getZoneDestinationId(), dest) : null;
         Produit produit = findProduit(dto.getProduitId());
 
-        Stock sourceStock = stockService.findOrCreateStock(produit.getId(), sourceEntrepot.getId(), sourceZone != null ? sourceZone.getId() : null);
-        if (sourceStock.getQuantiteDisponible() < dto.getQuantite()) {
-            throw new IllegalArgumentException("Stock insuffisant pour le produit '" + produit.getNom() +
-                    "' dans l'entrepôt " + sourceEntrepot.getNom() +
-                    " (quantité disponible = " + sourceStock.getQuantiteDisponible() + ")");
+        // Empêcher un transfert vers la même zone dans le même entrepôt
+        if (source.getId().equals(dest.getId()) &&
+            java.util.Objects.equals(dto.getZoneSourceId(), dto.getZoneDestinationId())) {
+            throw new IllegalArgumentException("Source et destination doivent être différentes");
         }
 
-        stockService.verifierCapaciteDisponible(destinationEntrepot, destinationZone, produit, dto.getQuantite());
-        Stock destinationStock = stockService.findOrCreateStock(produit.getId(), destinationEntrepot.getId(), destinationZone != null ? destinationZone.getId() : null);
+        Utilisateur createur = userRepo.findByUsername(usernameCreateur).orElse(null);
 
-        sourceStock.setQuantiteDisponible(sourceStock.getQuantiteDisponible() - dto.getQuantite());
-        destinationStock.setQuantiteDisponible(destinationStock.getQuantiteDisponible() + dto.getQuantite());
+        Transfert t = new Transfert();
+        t.setReference(genererReference());
+        t.setProduit(produit);
+        t.setEntrepotSource(source);
+        t.setZoneSource(zSource);
+        t.setEntrepotDestination(dest);
+        t.setZoneDestination(zDest);
+        t.setQuantite(dto.getQuantite());
+        t.setCommentaire(dto.getCommentaire());
+        t.setStatut(Transfert.Statut.BROUILLON);
+        t.setCreateur(createur);
 
-        stockService.save(sourceStock);
-        stockService.save(destinationStock);
+        return mapper.toDTO(transfertRepo.save(t));
+    }
 
-        String commentaire = dto.getCommentaire() != null && !dto.getCommentaire().trim().isEmpty()
-                ? dto.getCommentaire().trim() : "Transfert validé";
+    // --- Expédition BROUILLON → EXPEDIE ---
 
-        MouvementStock sourceMouvement = new MouvementStock();
-        sourceMouvement.setStock(sourceStock);
-        sourceMouvement.setType(MouvementStock.Type.TRANSFERT);
-        sourceMouvement.setQuantite(dto.getQuantite());
-        sourceMouvement.setSource("Vers " + destinationEntrepot.getNom() + (destinationZone != null ? " / " + destinationZone.getNom() : ""));
-        sourceMouvement.setCommentaire(commentaire);
-        mouvementService.enregistrer(sourceMouvement);
+    public TransfertDTO expedier(Long id) {
+        Transfert t = getTransfert(id);
+        if (t.getStatut() != Transfert.Statut.BROUILLON) {
+            throw new IllegalArgumentException("Seul un transfert en BROUILLON peut être expédié");
+        }
 
-        MouvementStock destinationMouvement = new MouvementStock();
-        destinationMouvement.setStock(destinationStock);
-        destinationMouvement.setType(MouvementStock.Type.TRANSFERT);
-        destinationMouvement.setQuantite(dto.getQuantite());
-        destinationMouvement.setSource("Depuis " + sourceEntrepot.getNom() + (sourceZone != null ? " / " + sourceZone.getNom() : ""));
-        destinationMouvement.setCommentaire(commentaire);
-        mouvementService.enregistrer(destinationMouvement);
+        // Vérifier et débiter le stock source
+        Stock stockSource = stockService.findOrCreateStock(
+            t.getProduit().getId(),
+            t.getEntrepotSource().getId(),
+            t.getZoneSource() != null ? t.getZoneSource().getId() : null
+        );
+        if (stockSource.getQuantiteDisponible() < t.getQuantite()) {
+            throw new IllegalArgumentException(
+                "Stock insuffisant : disponible=" + stockSource.getQuantiteDisponible() +
+                ", demandé=" + t.getQuantite()
+            );
+        }
 
-        stockService.recalculerCapaciteZone(sourceZone);
-        stockService.recalculerCapaciteEntrepot(sourceEntrepot);
-        stockService.recalculerCapaciteZone(destinationZone);
-        stockService.recalculerCapaciteEntrepot(destinationEntrepot);
+        // Débiter la source
+        stockSource.setQuantiteDisponible(stockSource.getQuantiteDisponible() - t.getQuantite());
+        stockService.save(stockSource);
+
+        // Mettre en transit à la destination
+        Stock stockDest = stockService.findOrCreateStock(
+            t.getProduit().getId(),
+            t.getEntrepotDestination().getId(),
+            t.getZoneDestination() != null ? t.getZoneDestination().getId() : null
+        );
+        stockDest.setQuantiteTransit(stockDest.getQuantiteTransit() + t.getQuantite());
+        stockService.save(stockDest);
+
+        // Mouvement TRANSFERT côté source
+        enregistrerMouvement(stockSource, MouvementStock.Type.TRANSFERT, t.getQuantite(),
+            "Expédié vers " + t.getEntrepotDestination().getNom(), t.getCommentaire());
+
+        // Recalculer capacités
+        stockService.recalculerCapaciteZone(t.getZoneSource());
+        stockService.recalculerCapaciteEntrepot(t.getEntrepotSource());
+
+        t.setStatut(Transfert.Statut.EXPEDIE);
+        t.setDateExpedi(LocalDateTime.now());
+        return mapper.toDTO(transfertRepo.save(t));
+    }
+
+    // --- Réception EXPEDIE → RECU ---
+
+    public TransfertDTO recevoir(Long id) {
+        Transfert t = getTransfert(id);
+        if (t.getStatut() != Transfert.Statut.EXPEDIE) {
+            throw new IllegalArgumentException("Seul un transfert EXPÉDIÉ peut être reçu");
+        }
+
+        Stock stockDest = stockService.findOrCreateStock(
+            t.getProduit().getId(),
+            t.getEntrepotDestination().getId(),
+            t.getZoneDestination() != null ? t.getZoneDestination().getId() : null
+        );
+
+        // Sortir du transit et créditer disponible
+        stockDest.setQuantiteTransit(Math.max(0, stockDest.getQuantiteTransit() - t.getQuantite()));
+        stockDest.setQuantiteDisponible(stockDest.getQuantiteDisponible() + t.getQuantite());
+        stockService.save(stockDest);
+
+        // Mouvement ENTREE côté destination
+        enregistrerMouvement(stockDest, MouvementStock.Type.ENTREE, t.getQuantite(),
+            "Reçu depuis " + t.getEntrepotSource().getNom(), t.getCommentaire());
+
+        // Recalculer capacités destination
+        stockService.recalculerCapaciteZone(t.getZoneDestination());
+        stockService.recalculerCapaciteEntrepot(t.getEntrepotDestination());
+
+        t.setStatut(Transfert.Statut.RECU);
+        t.setDateRecu(LocalDateTime.now());
+        return mapper.toDTO(transfertRepo.save(t));
+    }
+
+    // --- Annulation (seulement depuis BROUILLON) ---
+
+    public TransfertDTO annuler(Long id) {
+        Transfert t = getTransfert(id);
+        if (t.getStatut() != Transfert.Statut.BROUILLON) {
+            throw new IllegalArgumentException("Seul un transfert en BROUILLON peut être annulé");
+        }
+        t.setStatut(Transfert.Statut.ANNULE);
+        return mapper.toDTO(transfertRepo.save(t));
+    }
+
+    // --- Helpers ---
+
+    private Transfert getTransfert(Long id) {
+        return transfertRepo.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Transfert introuvable : " + id));
     }
 
     private Entrepot findEntrepot(Long id) {
@@ -96,19 +200,33 @@ public class TransfertService {
     }
 
     private ZoneFr findZone(Long id, Entrepot entrepot) {
-        if (id == null) {
-            return null;
-        }
-        ZoneFr zone = zoneRepo.findById(id)
+        ZoneFr z = zoneRepo.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Zone introuvable : " + id));
-        if (!zone.getEntrepot().getId().equals(entrepot.getId())) {
-            throw new IllegalArgumentException("La zone ne dépend pas de l'entrepôt sélectionné.");
+        if (!z.getEntrepot().getId().equals(entrepot.getId())) {
+            throw new IllegalArgumentException("La zone ne correspond pas à l'entrepôt sélectionné");
         }
-        return zone;
+        return z;
     }
 
     private Produit findProduit(Long id) {
         return produitRepo.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Produit introuvable : " + id));
+    }
+
+    private void enregistrerMouvement(Stock stock, MouvementStock.Type type,
+                                       int quantite, String source, String commentaire) {
+        MouvementStock m = new MouvementStock();
+        m.setStock(stock);
+        m.setType(type);
+        m.setQuantite(quantite);
+        m.setSource(source);
+        m.setCommentaire(commentaire);
+        mouvementService.enregistrer(m);
+    }
+
+    /** Génère une référence lisible : TRF-0001, TRF-0002... */
+    private String genererReference() {
+        long count = transfertRepo.countBy() + 1;
+        return String.format("TRF-%04d", count);
     }
 }

@@ -40,7 +40,7 @@ public class BonSortieService {
     }
 
     public java.util.List<BonSortieDTO> findAll() {
-        return repo.findAll().stream().map(this::toDTO).collect(Collectors.toList());
+        return repo.findAllByOrderByDateDesc().stream().map(this::toDTO).collect(Collectors.toList());
     }
 
     public BonSortieDTO findById(Long id) {
@@ -120,7 +120,8 @@ public class BonSortieService {
     }
 
     private String generateReference() {
-        return "SORTIE-" + System.currentTimeMillis();
+        long count = repo.countBy() + 1;
+        return String.format("BSO-%04d", count);
     }
 
     private BonSortieDTO toDTO(BonSortie bon) {

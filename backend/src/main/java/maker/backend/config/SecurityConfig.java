@@ -84,6 +84,7 @@ public class SecurityConfig {
                 // --- Création et modification : ADMIN + GESTIONNAIRE ---
                 .requestMatchers(HttpMethod.POST, "/api/**").hasAnyRole("ADMIN", "GESTIONNAIRE")
                 .requestMatchers(HttpMethod.PUT, "/api/**").hasAnyRole("ADMIN", "GESTIONNAIRE")
+                .requestMatchers(HttpMethod.PATCH, "/api/**").hasAnyRole("ADMIN", "GESTIONNAIRE")
 
                 // --- Suppression / désactivation : ADMIN seulement, sauf bons en brouillon pour GESTIONNAIRE
                 .requestMatchers(HttpMethod.DELETE, "/api/bon-receptions/**").hasAnyRole("ADMIN", "GESTIONNAIRE")

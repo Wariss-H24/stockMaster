@@ -104,5 +104,10 @@ export const sortieApi = {
 }
 
 export const transfertApi = {
-  creer: (dto) => api.post('/transferts', dto)
+  findAll:  ()   => api.get('/transferts'),
+  findById: (id) => api.get(`/transferts/${id}`),
+  creer:    (dto) => api.post('/transferts', dto),
+  expedier: (id) => api.patch(`/transferts/${id}/expedier`),
+  recevoir: (id) => api.patch(`/transferts/${id}/recevoir`),
+  annuler:  (id) => api.patch(`/transferts/${id}/annuler`)
 }
