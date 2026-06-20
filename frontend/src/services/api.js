@@ -75,8 +75,9 @@ export const fournisseurApi = {
 }
 
 export const stockApi = {
-  findAll:  ()   => api.get('/stocks'),
-  findById: (id) => api.get(`/stocks/${id}`)
+  findAll:   ()                       => api.get('/stocks'),
+  findById:  (id)                     => api.get(`/stocks/${id}`),
+  majSeuils: (id, stockMin, stockMax) => api.patch(`/stocks/${id}/seuils`, { stockMin, stockMax })
 }
 
 export const mouvementStockApi = {
@@ -110,4 +111,49 @@ export const transfertApi = {
   expedier: (id) => api.patch(`/transferts/${id}/expedier`),
   recevoir: (id) => api.patch(`/transferts/${id}/recevoir`),
   annuler:  (id) => api.patch(`/transferts/${id}/annuler`)
+}
+
+export const inventaireApi = {
+  findAll:          ()            => api.get('/inventaires'),
+  findById:         (id)          => api.get(`/inventaires/${id}`),
+  creer:            (dto)         => api.post('/inventaires', dto),
+  mettreAJourLignes:(id, lignes)  => api.patch(`/inventaires/${id}/lignes`, lignes),
+  cloturer:         (id)          => api.patch(`/inventaires/${id}/cloturer`),
+  annuler:          (id)          => api.patch(`/inventaires/${id}/annuler`)
+}
+
+export const alerteApi = {
+  findAll:      () => api.get('/alertes'),
+  critiques:    () => api.get('/alertes/critiques'),
+  envoyerEmail: () => api.post('/alertes/envoyer-email')
+}
+
+export const dashboardApi = {
+  kpis: () => api.get('/dashboard/kpis')
+}
+
+export const reportingApi = {
+  pdfStock:         () => api.get('/reporting/pdf/stock',       { responseType: 'blob' }),
+  pdfMouvements:    () => api.get('/reporting/pdf/mouvements',  { responseType: 'blob' }),
+  excelStock:       () => api.get('/reporting/excel/stock',     { responseType: 'blob' }),
+  excelMouvements:  () => api.get('/reporting/excel/mouvements',{ responseType: 'blob' }),
+  csvStock:         () => api.get('/reporting/csv/stock',       { responseType: 'blob' }),
+  csvMouvements:    () => api.get('/reporting/csv/mouvements',  { responseType: 'blob' })
+}
+
+export const auditApi = {
+  findAll:   (page = 0, size = 50) => api.get(`/audit?page=${page}&size=${size}`),
+  recherche: (params)              => api.get('/audit/recherche', { params }),
+  parEntite: (entite, id)          => api.get(`/audit/entite/${entite}/${id}`)
+}
+
+export const commandeApi = {
+  findAll:      ()            => api.get('/commandes-fournisseurs'),
+  findById:     (id)          => api.get(`/commandes-fournisseurs/${id}`),
+  creer:        (dto)         => api.post('/commandes-fournisseurs', dto),
+  modifier:     (id, dto)     => api.put(`/commandes-fournisseurs/${id}`, dto),
+  envoyer:      (id)          => api.patch(`/commandes-fournisseurs/${id}/envoyer`),
+  receptionner: (id)          => api.patch(`/commandes-fournisseurs/${id}/receptionner`),
+  annuler:      (id)          => api.patch(`/commandes-fournisseurs/${id}/annuler`),
+  supprimer:    (id)          => api.delete(`/commandes-fournisseurs/${id}`)
 }

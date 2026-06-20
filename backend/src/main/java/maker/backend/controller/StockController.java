@@ -5,6 +5,7 @@ import maker.backend.service.StockService;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/stocks")
@@ -25,5 +26,14 @@ public class StockController {
     @GetMapping("/{id}")
     public StockDTO obtenir(@PathVariable Long id) {
         return service.findById(id);
+    }
+
+    /** Met à jour stockMin et stockMax d'un stock existant. */
+    @PatchMapping("/{id}/seuils")
+    public StockDTO majSeuils(@PathVariable Long id,
+                               @RequestBody Map<String, Integer> seuils) {
+        return service.majSeuils(id,
+            seuils.getOrDefault("stockMin", 0),
+            seuils.getOrDefault("stockMax", 0));
     }
 }
