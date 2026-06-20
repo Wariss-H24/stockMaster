@@ -109,7 +109,55 @@
           <span>Transferts</span>
         </router-link>
 
-        <!-- Section Admin : visible seulement pour ADMIN -->
+        <!-- Section Avancé : M11–M16 -->
+        <p class="nav-section-label">Avancé</p>
+
+        <router-link v-if="auth.aUnRole('ADMIN','GESTIONNAIRE')" to="/inventaires" class="nav-item" @click="sidebarOuverte = false">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+            <path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2" stroke="currentColor" stroke-width="1.8"/>
+            <rect x="9" y="3" width="6" height="4" rx="1" stroke="currentColor" stroke-width="1.8"/>
+            <path d="M9 12h6M9 16h4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+          </svg>
+          <span>Inventaires</span>
+        </router-link>
+
+        <router-link to="/alertes" class="nav-item" @click="sidebarOuverte = false">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+            <path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9" stroke="currentColor" stroke-width="1.8"/>
+            <path d="M13.73 21a2 2 0 01-3.46 0" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+          </svg>
+          <span>Alertes</span>
+          <span v-if="nbAlertes > 0" class="badge-notif">{{ nbAlertes }}</span>
+        </router-link>
+
+        <router-link v-if="auth.aUnRole('ADMIN','GESTIONNAIRE','AUDITEUR')" to="/reporting" class="nav-item" @click="sidebarOuverte = false">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+            <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z" stroke="currentColor" stroke-width="1.8"/>
+            <polyline points="14 2 14 8 20 8" stroke="currentColor" stroke-width="1.8"/>
+            <line x1="16" y1="13" x2="8" y2="13" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+            <line x1="16" y1="17" x2="8" y2="17" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+          </svg>
+          <span>Reporting</span>
+        </router-link>
+
+        <router-link v-if="auth.aUnRole('ADMIN','GESTIONNAIRE')" to="/commandes-fournisseurs" class="nav-item" @click="sidebarOuverte = false">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+            <path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z" stroke="currentColor" stroke-width="1.8"/>
+            <line x1="3" y1="6" x2="21" y2="6" stroke="currentColor" stroke-width="1.8"/>
+            <path d="M16 10a4 4 0 01-8 0" stroke="currentColor" stroke-width="1.8"/>
+          </svg>
+          <span>Commandes</span>
+        </router-link>
+
+        <router-link v-if="auth.aUnRole('ADMIN','AUDITEUR')" to="/tracabilite" class="nav-item" @click="sidebarOuverte = false">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+            <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" stroke="currentColor" stroke-width="1.8"/>
+            <path d="M9 12l2 2 4-4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+          <span>Traçabilité</span>
+        </router-link>
+
+        <!-- Section Admin -->
         <template v-if="auth.aRole('ADMIN')">
           <p class="nav-section-label">Administration</p>
           <router-link to="/utilisateurs" class="nav-item" @click="sidebarOuverte = false">
@@ -168,39 +216,57 @@
 
 <script>
 import { authStore } from './services/authStore.js'
+import { alerteApi } from './services/api.js'
 
 export default {
   name: 'App',
   data() {
-    return { sidebarOuverte: false, auth: authStore }
+    return { sidebarOuverte: false, auth: authStore, nbAlertes: 0, _alerteTimer: null }
+  },
+  mounted() {
+    this.chargerAlertes()
+    this._alerteTimer = setInterval(this.chargerAlertes, 60000)
+  },
+  beforeUnmount() {
+    clearInterval(this._alerteTimer)
   },
   computed: {
     titreRoute() {
       const titres = {
-        '/tableau-de-bord':   'Tableau de bord',
-        '/entrepots':         'Entrepôts',
-        '/zones':             'Zones de stockage',
-        '/produits':          'Produits',
-        '/categories':        'Catégories',
-        '/fournisseurs':      'Fournisseurs',
-        '/stocks':            'Stocks',
-        '/mouvements-stock':  'Mouvements de stock',
-        '/bon-receptions':    'Bons de réception',
-        '/bon-sorties':       'Bons de sortie',
-        '/transferts':        'Transferts',
-        '/utilisateurs':      'Utilisateurs'
+        '/tableau-de-bord':          'Tableau de bord',
+        '/entrepots':                'Entrepôts',
+        '/zones':                    'Zones de stockage',
+        '/produits':                 'Produits',
+        '/categories':               'Catégories',
+        '/fournisseurs':             'Fournisseurs',
+        '/stocks':                   'Stocks',
+        '/mouvements-stock':         'Mouvements de stock',
+        '/bon-receptions':           'Bons de réception',
+        '/bon-sorties':              'Bons de sortie',
+        '/transferts':               'Transferts',
+        '/inventaires':              'Inventaires',
+        '/alertes':                  'Alertes stock',
+        '/reporting':                'Reporting & Exports',
+        '/tracabilite':              'Traçabilité & Audit',
+        '/commandes-fournisseurs':   'Commandes fournisseurs',
+        '/utilisateurs':             'Utilisateurs'
       }
       const path = this.$route.path
       return titres[path] || titres[Object.keys(titres).find(k => path.startsWith(k + '/')) || ''] || 'StockMaster'
     },
-    // Initiales de l'utilisateur connecté pour l'avatar
     initiales() {
       const nom = this.auth.user?.nomComplet || ''
       return nom.split(' ').map(n => n[0]).slice(0, 2).join('').toUpperCase() || '?'
     }
   },
   methods: {
-    deconnecter() {
+    async chargerAlertes() {
+      if (!authStore.estConnecte) return
+      try {
+        const res = await alerteApi.critiques()
+        this.nbAlertes = res.data.length
+      } catch { /* silencieux */ }
+    },    deconnecter() {
       authStore.logout()
       this.$router.push('/login')
     }
@@ -383,6 +449,20 @@ body {
   transition: color .15s, background .15s;
 }
 .logout-btn:hover { color: #fff; background: rgba(220,38,38,.3); }
+
+/* Badge de notification dans la sidebar */
+.badge-notif {
+  margin-left: auto;
+  background: #ef4444;
+  color: #fff;
+  font-size: .65rem;
+  font-weight: 700;
+  padding: 1px 6px;
+  border-radius: 999px;
+  line-height: 1.6;
+  min-width: 18px;
+  text-align: center;
+}
 
 /* Overlay mobile */
 .sidebar-overlay {

@@ -79,6 +79,10 @@ public class SecurityConfig {
                 // --- Lecture : tous les rôles connectés (ou authentifiés pour stocks/mouvements) ---
                 .requestMatchers(HttpMethod.GET, "/api/stocks/**").authenticated()
                 .requestMatchers(HttpMethod.GET, "/api/mouvements-stock/**").authenticated()
+                .requestMatchers(HttpMethod.GET, "/api/dashboard/**").authenticated()
+                .requestMatchers(HttpMethod.GET, "/api/alertes/**").authenticated()
+                .requestMatchers(HttpMethod.GET, "/api/audit/**").hasAnyRole("ADMIN", "AUDITEUR")
+                .requestMatchers(HttpMethod.GET, "/api/reporting/**").hasAnyRole("ADMIN", "GESTIONNAIRE", "AUDITEUR")
                 .requestMatchers(HttpMethod.GET, "/api/**").hasAnyRole("ADMIN", "GESTIONNAIRE", "MAGASINIER", "AUDITEUR")
 
                 // --- Création et modification : ADMIN + GESTIONNAIRE ---
@@ -89,6 +93,7 @@ public class SecurityConfig {
                 // --- Suppression / désactivation : ADMIN seulement, sauf bons en brouillon pour GESTIONNAIRE
                 .requestMatchers(HttpMethod.DELETE, "/api/bon-receptions/**").hasAnyRole("ADMIN", "GESTIONNAIRE")
                 .requestMatchers(HttpMethod.DELETE, "/api/bon-sorties/**").hasAnyRole("ADMIN", "GESTIONNAIRE")
+                .requestMatchers(HttpMethod.DELETE, "/api/commandes-fournisseurs/**").hasAnyRole("ADMIN", "GESTIONNAIRE")
                 .requestMatchers(HttpMethod.DELETE, "/api/**").hasRole("ADMIN")
 
                 // Tout le reste : authentifié

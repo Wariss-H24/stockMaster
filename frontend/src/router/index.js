@@ -13,49 +13,49 @@ import MouvementsStockPage from '../views/MouvementsStockPage.vue'
 import BonReceptionsPage from '../views/BonReceptionsPage.vue'
 import BonSortiesPage from '../views/BonSortiesPage.vue'
 import TransfertsPage from '../views/TransfertsPage.vue'
+// Modules 11–16
+import InventairesPage from '../views/InventairesPage.vue'
+import AlertesPage from '../views/AlertesPage.vue'
+import ReportingPage from '../views/ReportingPage.vue'
+import TracabilitePage from '../views/TracabilitePage.vue'
+import CommandesFournisseursPage from '../views/CommandesFournisseursPage.vue'
 
 const routes = [
-  // Page publique
   { path: '/login', component: LoginPage, meta: { public: true } },
 
-  // Pages protégées
   { path: '/', redirect: '/tableau-de-bord' },
-  { path: '/tableau-de-bord', component: TableauDeBord, meta: { requiertAuth: true } },
-  { path: '/entrepots',   component: EntrepotsPage,   meta: { requiertAuth: true } },
-  { path: '/zones',       component: ZonesPage,       meta: { requiertAuth: true } },
-  { path: '/produits',    component: ProduitsPage,     meta: { requiertAuth: true } },
-  { path: '/categories',  component: CategoriesPage,  meta: { requiertAuth: true } },
-  { path: '/fournisseurs',component: FournisseursPage,meta: { requiertAuth: true } },
-  { path: '/stocks',      component: StocksPage,      meta: { requiertAuth: true } },
-  { path: '/mouvements-stock', component: MouvementsStockPage, meta: { requiertAuth: true } },
-  { path: '/bon-receptions', component: BonReceptionsPage, meta: { requiertAuth: true } },
-  { path: '/bon-sorties', component: BonSortiesPage, meta: { requiertAuth: true } },
-  { path: '/transferts', component: TransfertsPage, meta: { requiertAuth: true, roles: ['ADMIN', 'GESTIONNAIRE'] } },
+  { path: '/tableau-de-bord',       component: TableauDeBord,              meta: { requiertAuth: true } },
+  { path: '/entrepots',             component: EntrepotsPage,              meta: { requiertAuth: true } },
+  { path: '/zones',                 component: ZonesPage,                  meta: { requiertAuth: true } },
+  { path: '/produits',              component: ProduitsPage,               meta: { requiertAuth: true } },
+  { path: '/categories',            component: CategoriesPage,             meta: { requiertAuth: true } },
+  { path: '/fournisseurs',          component: FournisseursPage,           meta: { requiertAuth: true } },
+  { path: '/stocks',                component: StocksPage,                 meta: { requiertAuth: true } },
+  { path: '/mouvements-stock',      component: MouvementsStockPage,        meta: { requiertAuth: true } },
+  { path: '/bon-receptions',        component: BonReceptionsPage,          meta: { requiertAuth: true } },
+  { path: '/bon-sorties',           component: BonSortiesPage,             meta: { requiertAuth: true } },
+  { path: '/transferts',            component: TransfertsPage,             meta: { requiertAuth: true, roles: ['ADMIN','GESTIONNAIRE'] } },
 
-  // Page réservée à l'ADMIN
-  {
-    path: '/utilisateurs',
-    component: UtilisateursPage,
-    meta: { requiertAuth: true, roles: ['ADMIN'] }
-  }
+  // ── Modules 11–16 ─────────────────────────────────────────────────────────
+  { path: '/inventaires',           component: InventairesPage,            meta: { requiertAuth: true, roles: ['ADMIN','GESTIONNAIRE'] } },
+  { path: '/alertes',               component: AlertesPage,                meta: { requiertAuth: true } },
+  { path: '/reporting',             component: ReportingPage,              meta: { requiertAuth: true } },
+  { path: '/tracabilite',           component: TracabilitePage,            meta: { requiertAuth: true, roles: ['ADMIN','AUDITEUR'] } },
+  { path: '/commandes-fournisseurs',component: CommandesFournisseursPage,  meta: { requiertAuth: true, roles: ['ADMIN','GESTIONNAIRE'] } },
+
+  // Administration ADMIN uniquement
+  { path: '/utilisateurs', component: UtilisateursPage, meta: { requiertAuth: true, roles: ['ADMIN'] } }
 ]
 
 const router = createRouter({ history: createWebHistory(), routes })
 
-// Guard global : vérifie la connexion et les rôles avant chaque navigation
 router.beforeEach((to, from, next) => {
-  // Route publique → OK
   if (to.meta.public) return next()
-
-  // Pas connecté → rediriger vers /login
   if (!authStore.estConnecte) return next('/login')
-
-  // Rôle requis → vérifier
   if (to.meta.roles) {
     const aAcces = to.meta.roles.some(r => authStore.aRole(r))
-    if (!aAcces) return next('/tableau-de-bord') // Accès refusé → dashboard
+    if (!aAcces) return next('/tableau-de-bord')
   }
-
   next()
 })
 

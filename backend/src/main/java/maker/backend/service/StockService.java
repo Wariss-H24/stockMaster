@@ -85,6 +85,15 @@ public class StockService {
         return repo.save(stock);
     }
 
+    /** Met à jour les seuils stockMin / stockMax d'un stock. */
+    public StockDTO majSeuils(Long id, int stockMin, int stockMax) {
+        Stock stock = repo.findById(id)
+                .orElseThrow(() -> new maker.backend.exception.ResourceNotFoundException("Stock introuvable : " + id));
+        stock.setStockMin(Math.max(0, stockMin));
+        stock.setStockMax(Math.max(0, stockMax));
+        return mapper.toDTO(repo.save(stock));
+    }
+
     public void recalculerCapaciteZone(ZoneFr zone) {
         if (zone == null) return;
         int utilise = (int) Math.round(repo.sumEspaceUtiliseByZone(zone));
