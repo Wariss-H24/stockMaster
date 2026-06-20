@@ -25,7 +25,7 @@
         </button>
       </div>
 
-      <nav class="sidebar-nav">
+      <nav class="sidebar-nav scrollbar-none">
         <p class="nav-section-label">Principal</p>
         <router-link to="/tableau-de-bord" class="nav-item" @click="sidebarOuverte = false">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
@@ -772,6 +772,9 @@ tbody td { padding: 13px 16px; color: var(--gray-700); vertical-align: middle; }
   margin-bottom: 20px;
   gap: 12px;
   flex-wrap: wrap;
+}
+.scrollbar-none::-webkit-scrollbar {
+  display: none;
 }
 .search-box {
   display: flex; align-items: center; gap: 8px;
