@@ -1,6 +1,7 @@
 package maker.backend.controller;
 
 import jakarta.validation.Valid;
+import maker.backend.config.Tracable;
 import maker.backend.dto.CommandeFournisseurDTO;
 import maker.backend.service.CommandeFournisseurService;
 import org.springframework.http.HttpStatus;
@@ -17,47 +18,39 @@ public class CommandeFournisseurController {
 
     private final CommandeFournisseurService service;
 
-    public CommandeFournisseurController(CommandeFournisseurService service) {
-        this.service = service;
-    }
+    public CommandeFournisseurController(CommandeFournisseurService service) { this.service = service; }
 
     @GetMapping
-    public List<CommandeFournisseurDTO> tous() {
-        return service.findAll();
-    }
+    public List<CommandeFournisseurDTO> tous() { return service.findAll(); }
 
     @GetMapping("/{id}")
-    public CommandeFournisseurDTO obtenir(@PathVariable Long id) {
-        return service.findById(id);
-    }
+    public CommandeFournisseurDTO obtenir(@PathVariable Long id) { return service.findById(id); }
 
     @PostMapping
+    @Tracable(entite = "CommandeFournisseur", action = "CREER")
     public ResponseEntity<CommandeFournisseurDTO> creer(
             @Valid @RequestBody CommandeFournisseurDTO dto, Authentication auth) {
-        return ResponseEntity.status(HttpStatus.CREATED)
-                .body(service.creer(dto, auth.getName()));
+        return ResponseEntity.status(HttpStatus.CREATED).body(service.creer(dto, auth.getName()));
     }
 
     @PutMapping("/{id}")
+    @Tracable(entite = "CommandeFournisseur", action = "MODIFIER")
     public CommandeFournisseurDTO modifier(@PathVariable Long id,
                                            @Valid @RequestBody CommandeFournisseurDTO dto) {
         return service.modifier(id, dto);
     }
 
     @PatchMapping("/{id}/envoyer")
-    public CommandeFournisseurDTO envoyer(@PathVariable Long id) {
-        return service.envoyer(id);
-    }
+    @Tracable(entite = "CommandeFournisseur", action = "ENVOYER")
+    public CommandeFournisseurDTO envoyer(@PathVariable Long id) { return service.envoyer(id); }
 
     @PatchMapping("/{id}/receptionner")
-    public CommandeFournisseurDTO receptionner(@PathVariable Long id) {
-        return service.receptionner(id);
-    }
+    @Tracable(entite = "CommandeFournisseur", action = "RECEPTIONNER")
+    public CommandeFournisseurDTO receptionner(@PathVariable Long id) { return service.receptionner(id); }
 
     @PatchMapping("/{id}/annuler")
-    public CommandeFournisseurDTO annuler(@PathVariable Long id) {
-        return service.annuler(id);
-    }
+    @Tracable(entite = "CommandeFournisseur", action = "ANNULER")
+    public CommandeFournisseurDTO annuler(@PathVariable Long id) { return service.annuler(id); }
 
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> supprimer(@PathVariable Long id) {

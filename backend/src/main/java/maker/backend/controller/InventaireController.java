@@ -1,6 +1,7 @@
 package maker.backend.controller;
 
 import jakarta.validation.Valid;
+import maker.backend.config.Tracable;
 import maker.backend.dto.InventaireDTO;
 import maker.backend.dto.InventaireLigneDTO;
 import maker.backend.service.InventaireService;
@@ -18,25 +19,18 @@ public class InventaireController {
 
     private final InventaireService service;
 
-    public InventaireController(InventaireService service) {
-        this.service = service;
-    }
+    public InventaireController(InventaireService service) { this.service = service; }
 
     @GetMapping
-    public List<InventaireDTO> tous() {
-        return service.findAll();
-    }
+    public List<InventaireDTO> tous() { return service.findAll(); }
 
     @GetMapping("/{id}")
-    public InventaireDTO obtenir(@PathVariable Long id) {
-        return service.findById(id);
-    }
+    public InventaireDTO obtenir(@PathVariable Long id) { return service.findById(id); }
 
     @PostMapping
-    public ResponseEntity<InventaireDTO> creer(@Valid @RequestBody InventaireDTO dto,
-                                                Authentication auth) {
-        return ResponseEntity.status(HttpStatus.CREATED)
-                .body(service.creer(dto, auth.getName()));
+    @Tracable(entite = "Inventaire", action = "CREER")
+    public ResponseEntity<InventaireDTO> creer(@Valid @RequestBody InventaireDTO dto, Authentication auth) {
+        return ResponseEntity.status(HttpStatus.CREATED).body(service.creer(dto, auth.getName()));
     }
 
     @PatchMapping("/{id}/lignes")
@@ -46,12 +40,10 @@ public class InventaireController {
     }
 
     @PatchMapping("/{id}/cloturer")
-    public InventaireDTO cloturer(@PathVariable Long id) {
-        return service.cloturer(id);
-    }
+    @Tracable(entite = "Inventaire", action = "CLOTURER")
+    public InventaireDTO cloturer(@PathVariable Long id) { return service.cloturer(id); }
 
     @PatchMapping("/{id}/annuler")
-    public InventaireDTO annuler(@PathVariable Long id) {
-        return service.annuler(id);
-    }
+    @Tracable(entite = "Inventaire", action = "ANNULER")
+    public InventaireDTO annuler(@PathVariable Long id) { return service.annuler(id); }
 }

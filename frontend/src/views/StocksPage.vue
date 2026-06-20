@@ -66,7 +66,7 @@
             <tr>
               <th>Produit</th><th>Entrepôt</th><th>Zone</th>
               <th>Disponible</th><th>Réservé</th><th>Transit</th>
-              <th>Stock Min ↕</th><th>Stock Max ↕</th><th>État</th>
+              <th>Stock Min</th><th>État</th>
             </tr>
           </thead>
           <tbody>
@@ -93,27 +93,15 @@
                 <span v-else style="color:var(--gray-400);">0</span>
               </td>
               <td style="color:var(--gray-500);">{{ s.quantiteTransit }}</td>
-              <td style="font-size:.82rem;color:var(--gray-500);">
-                <!-- stockMin éditable inline -->
-                <div class="seuil-cell">
-                  <input type="number" min="0" class="seuil-input"
-                    :value="s.stockMin"
-                    @change="e => majSeuils(s, +e.target.value, s.stockMax)"
-                    title="Stock minimum — déclenche une alerte quand la quantité passe en dessous" />
-                </div>
-              </td>
-              <td style="font-size:.82rem;color:var(--gray-500);">
-                <!-- stockMax éditable inline -->
-                <div class="seuil-cell">
-                  <input type="number" min="0" class="seuil-input"
-                    :value="s.stockMax"
-                    @change="e => majSeuils(s, s.stockMin, +e.target.value)"
-                    title="Stock maximum" />
-                </div>
+              <td style="font-size:.85rem;">
+                <span v-if="s.stockMin > 0" :style="estCritique(s) ? 'color:var(--danger);font-weight:700;' : 'color:var(--gray-600);'">
+                  {{ s.stockMin }}
+                </span>
+                <span v-else style="color:var(--gray-300);">—</span>
               </td>
               <td>
                 <span v-if="estCritique(s)" class="badge badge-danger">⚠ Critique</span>
-                <span v-else-if="s.quantiteDisponible <= s.stockMin * 1.2 && s.stockMin > 0" class="badge badge-warning">Bas</span>
+                <span v-else-if="s.stockMin > 0 && s.quantiteDisponible <= s.stockMin * 1.2" class="badge badge-warning">Bas</span>
                 <span v-else class="badge badge-success">Normal</span>
               </td>
             </tr>

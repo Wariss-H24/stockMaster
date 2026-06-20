@@ -23,6 +23,7 @@ public class ProduitMapper {
         dto.setPrixVente(p.getPrixVente());
         dto.setPoids(p.getPoids());
         dto.setVolume(p.getVolume());
+        dto.setStockMinDefaut(p.getStockMinDefaut());
         dto.setSupprime(p.isSupprime());
         return dto;
     }
@@ -37,6 +38,7 @@ public class ProduitMapper {
         p.setPrixVente(dto.getPrixVente());
         p.setPoids(dto.getPoids());
         p.setVolume(dto.getVolume());
+        p.setStockMinDefaut(dto.getStockMinDefaut() != null ? dto.getStockMinDefaut() : 0);
         p.setSupprime(false);
         return p;
     }

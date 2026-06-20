@@ -30,5 +30,8 @@ public class ProduitDTO {
     private Double poids;
     private Double volume;
 
+    /** Stock minimum par défaut — propagé sur tous les stocks de ce produit */
+    private Integer stockMinDefaut;
+
     private boolean supprime;
 }

@@ -1,6 +1,7 @@
 package maker.backend.controller;
 
 import jakarta.validation.Valid;
+import maker.backend.config.Tracable;
 import maker.backend.dto.TransfertDTO;
 import maker.backend.service.TransfertService;
 import org.springframework.http.HttpStatus;
@@ -21,39 +22,27 @@ public class TransfertController {
         this.service = service;
     }
 
-    // Tous les transferts (historique)
     @GetMapping
-    public List<TransfertDTO> tous() {
-        return service.findAll();
-    }
+    public List<TransfertDTO> tous() { return service.findAll(); }
 
     @GetMapping("/{id}")
-    public TransfertDTO obtenir(@PathVariable Long id) {
-        return service.findById(id);
-    }
+    public TransfertDTO obtenir(@PathVariable Long id) { return service.findById(id); }
 
-    // Créer un transfert en BROUILLON
     @PostMapping
+    @Tracable(entite = "Transfert", action = "CREER")
     public ResponseEntity<TransfertDTO> creer(@Valid @RequestBody TransfertDTO dto, Authentication auth) {
-        return ResponseEntity.status(HttpStatus.CREATED)
-                .body(service.creer(dto, auth.getName()));
+        return ResponseEntity.status(HttpStatus.CREATED).body(service.creer(dto, auth.getName()));
     }
 
-    // BROUILLON → EXPEDIE
     @PatchMapping("/{id}/expedier")
-    public TransfertDTO expedier(@PathVariable Long id) {
-        return service.expedier(id);
-    }
+    @Tracable(entite = "Transfert", action = "EXPEDIER")
+    public TransfertDTO expedier(@PathVariable Long id) { return service.expedier(id); }
 
-    // EXPEDIE → RECU
     @PatchMapping("/{id}/recevoir")
-    public TransfertDTO recevoir(@PathVariable Long id) {
-        return service.recevoir(id);
-    }
+    @Tracable(entite = "Transfert", action = "RECEVOIR")
+    public TransfertDTO recevoir(@PathVariable Long id) { return service.recevoir(id); }
 
-    // BROUILLON → ANNULE
     @PatchMapping("/{id}/annuler")
-    public TransfertDTO annuler(@PathVariable Long id) {
-        return service.annuler(id);
-    }
+    @Tracable(entite = "Transfert", action = "ANNULER")
+    public TransfertDTO annuler(@PathVariable Long id) { return service.annuler(id); }
 }

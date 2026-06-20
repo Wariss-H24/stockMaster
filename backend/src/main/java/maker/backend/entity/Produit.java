@@ -39,5 +39,9 @@ public class Produit {
     private Double poids;
     private Double volume;
 
+    /** Seuil d'alerte stock par défaut pour ce produit (propagé sur les stocks à la création/modification) */
+    @Min(0)
+    private Integer stockMinDefaut = 0;
+
     private boolean supprime = false;
 }

@@ -155,12 +155,15 @@ public class CommandeFournisseurService {
     }
 
     private CommandeLigne toLigne(CommandeLigneDTO dto, CommandeFournisseur cmd) {
+        if (dto.getProduitId() == null) {
+            throw new IllegalArgumentException("Chaque ligne de commande doit avoir un produit sélectionné.");
+        }
         CommandeLigne l = new CommandeLigne();
         l.setCommande(cmd);
         l.setProduit(produitRepo.findById(dto.getProduitId())
                 .orElseThrow(() -> new ResourceNotFoundException("Produit introuvable : " + dto.getProduitId())));
-        l.setQuantite(dto.getQuantite());
-        l.setPrixUnitaire(dto.getPrixUnitaire());
+        l.setQuantite(dto.getQuantite() != null ? dto.getQuantite() : 1);
+        l.setPrixUnitaire(dto.getPrixUnitaire() != null ? dto.getPrixUnitaire() : 0.0);
         return l;
     }
 
