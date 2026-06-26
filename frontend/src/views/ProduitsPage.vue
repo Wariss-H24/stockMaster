@@ -145,6 +145,16 @@
               <input class="form-input" type="number" step="0.0001" min="0" v-model.number="form.volume" />
             </div>
           </div>
+          <div class="form-group">
+            <label class="form-label">
+              Stock minimum
+              <span style="font-weight:400;color:var(--gray-400);font-size:.78rem;margin-left:4px;">
+                — une alerte se déclenche quand le stock passe en dessous
+              </span>
+            </label>
+            <input class="form-input" type="number" min="0" v-model.number="form.stockMinDefaut"
+              placeholder="0 = pas d'alerte" style="max-width:180px;" />
+          </div>
           <div class="form-error" v-if="erreur">{{ erreur }}</div>
         </div>
         <div class="modal-footer">
@@ -178,7 +188,7 @@ export default {
     return {
       liste: [], categories: [], chargement: true, modal: false, erreur: '', recherche: '',
       confirm: { visible: false, cible: null },
-      form: { id: null, reference: '', codeBarre: '', nom: '', categorieId: null, description: '', prixAchat: null, prixVente: null, poids: null, volume: null }
+      form: { id: null, reference: '', codeBarre: '', nom: '', categorieId: null, description: '', prixAchat: null, prixVente: null, poids: null, volume: null, stockMinDefaut: 0 }
     }
   },
   computed: {
@@ -211,8 +221,8 @@ export default {
     ouvrirModal(p = null) {
       this.erreur = ''
       this.form = p
-        ? { id: p.id, reference: p.reference, codeBarre: p.codeBarre, nom: p.nom, categorieId: p.categorieId || null, description: p.description, prixAchat: p.prixAchat, prixVente: p.prixVente, poids: p.poids, volume: p.volume }
-        : { id: null, reference: '', codeBarre: '', nom: '', categorieId: null, description: '', prixAchat: null, prixVente: null, poids: null, volume: null }
+        ? { id: p.id, reference: p.reference, codeBarre: p.codeBarre, nom: p.nom, categorieId: p.categorieId || null, description: p.description, prixAchat: p.prixAchat, prixVente: p.prixVente, poids: p.poids, volume: p.volume, stockMinDefaut: p.stockMinDefaut || 0 }
+        : { id: null, reference: '', codeBarre: '', nom: '', categorieId: null, description: '', prixAchat: null, prixVente: null, poids: null, volume: null, stockMinDefaut: 0 }
       this.modal = true
     },
     async sauvegarder() {

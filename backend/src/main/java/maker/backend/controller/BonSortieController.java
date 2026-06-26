@@ -1,6 +1,7 @@
 package maker.backend.controller;
 
 import jakarta.validation.Valid;
+import maker.backend.config.Tracable;
 import maker.backend.dto.BonSortieDTO;
 import maker.backend.service.BonSortieService;
 import org.springframework.http.HttpStatus;
@@ -31,16 +32,19 @@ public class BonSortieController {
     }
 
     @PostMapping
+    @Tracable(entite = "BonSortie", action = "CREER")
     public ResponseEntity<BonSortieDTO> creer(@Valid @RequestBody BonSortieDTO dto) {
         return ResponseEntity.status(HttpStatus.CREATED).body(service.creer(dto));
     }
 
     @PutMapping("/{id}")
+    @Tracable(entite = "BonSortie", action = "MODIFIER")
     public BonSortieDTO modifier(@PathVariable Long id, @Valid @RequestBody BonSortieDTO dto) {
         return service.modifier(id, dto);
     }
 
     @PostMapping("/{id}/valider")
+    @Tracable(entite = "BonSortie", action = "VALIDER")
     public BonSortieDTO valider(@PathVariable Long id) {
         return service.valider(id);
     }

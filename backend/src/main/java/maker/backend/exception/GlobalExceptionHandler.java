@@ -1,7 +1,9 @@
 package maker.backend.exception;
 
+import com.fasterxml.jackson.databind.exc.InvalidFormatException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
@@ -11,19 +13,14 @@ import java.time.LocalDateTime;
 import java.util.HashMap;
 import java.util.Map;
 
-/**
- * Gestionnaire global des exceptions — retourne des réponses JSON structurées.
- */
 @RestControllerAdvice
 public class GlobalExceptionHandler {
 
-    // 404 : ressource introuvable
     @ExceptionHandler(ResourceNotFoundException.class)
     public ResponseEntity<Map<String, Object>> handleNotFound(ResourceNotFoundException ex) {
         return buildResponse(HttpStatus.NOT_FOUND, ex.getMessage());
     }
 
-    // 400 : erreurs de validation Bean Validation (@NotBlank, @Min, etc.)
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public ResponseEntity<Map<String, Object>> handleValidation(MethodArgumentNotValidException ex) {
         Map<String, String> erreurs = new HashMap<>();
@@ -37,10 +34,23 @@ public class GlobalExceptionHandler {
         return ResponseEntity.badRequest().body(body);
     }
 
-    // 400 : erreur métier générique
     @ExceptionHandler(IllegalArgumentException.class)
     public ResponseEntity<Map<String, Object>> handleIllegalArg(IllegalArgumentException ex) {
         return buildResponse(HttpStatus.BAD_REQUEST, ex.getMessage());
+    }
+
+    /** Erreur de désérialisation JSON — ex : un champ Long reçoit "undefined" */
+    @ExceptionHandler(HttpMessageNotReadableException.class)
+    public ResponseEntity<Map<String, Object>> handleJsonError(HttpMessageNotReadableException ex) {
+        String message = "Données invalides dans la requête.";
+        Throwable cause = ex.getCause();
+        if (cause instanceof InvalidFormatException ife) {
+            String field = ife.getPath().isEmpty() ? "champ inconnu"
+                : ife.getPath().get(ife.getPath().size() - 1).getFieldName();
+            message = "Valeur invalide pour le champ \"" + field + "\" : "
+                + "\"" + ife.getValue() + "\" n'est pas un " + ife.getTargetType().getSimpleName() + ".";
+        }
+        return buildResponse(HttpStatus.BAD_REQUEST, message);
     }
 
     private ResponseEntity<Map<String, Object>> buildResponse(HttpStatus status, String message) {

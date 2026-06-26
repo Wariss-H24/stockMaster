@@ -40,7 +40,7 @@
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><circle cx="11" cy="11" r="7" stroke="currentColor" stroke-width="1.8"/><path d="M20 20l-3-3" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
           <input v-model="recherche" placeholder="Référence, fournisseur, entrepôt..." />
         </div>
-        <button class="btn btn-primary" @click="ouvrirModal">
+        <button class="btn btn-primary" @click="ouvrirModal()">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M12 5v14M5 12h14" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg>
           Nouvelle commande
         </button>
@@ -104,14 +104,14 @@
           <div class="form-row">
             <div class="form-group">
               <label class="form-label">Fournisseur *</label>
-              <select class="form-select" v-model.number="form.fournisseurId" :disabled="lectureSeule">
+              <select class="form-select" v-model="form.fournisseurId" :disabled="lectureSeule">
                 <option value="">Sélectionner</option>
                 <option v-for="f in fournisseurs" :key="f.id" :value="f.id">{{ f.nom }}</option>
               </select>
             </div>
             <div class="form-group">
               <label class="form-label">Entrepôt *</label>
-              <select class="form-select" v-model.number="form.entrepotId" :disabled="lectureSeule">
+              <select class="form-select" v-model="form.entrepotId" :disabled="lectureSeule">
                 <option value="">Sélectionner</option>
                 <option v-for="e in entrepots" :key="e.id" :value="e.id">{{ e.nom }}</option>
               </select>
@@ -154,7 +154,7 @@
                   </tr>
                   <tr v-for="(ligne, idx) in form.lignes" :key="idx">
                     <td>
-                      <select class="form-select" v-model.number="ligne.produitId" :disabled="lectureSeule">
+                      <select class="form-select" v-model="ligne.produitId" :disabled="lectureSeule">
                         <option value="">Sélectionner</option>
                         <option v-for="p in produits" :key="p.id" :value="p.id">{{ p.nom }}</option>
                       </select>
@@ -345,25 +345,76 @@ export default {
     },
     async sauvegarder() {
       this.erreurModal = ''
-      if (!this.form.fournisseurId) { this.erreurModal = 'Le fournisseur est requis.'; return }
-      if (!this.form.entrepotId)    { this.erreurModal = 'L\'entrepôt est requis.'; return }
-      if (!this.form.lignes.length) { this.erreurModal = 'Ajoutez au moins une ligne.'; return }
+
+      // Guard mode édition
+      if (this.modeEdition && !this.commandeEditId) {
+        this.erreurModal = 'ID de commande manquant. Fermez et réouvrez la commande.'
+        return
+      }
+
+      if (!this.form.fournisseurId)  { this.erreurModal = 'Le fournisseur est requis.'; return }
+      if (!this.form.entrepotId)     { this.erreurModal = 'L\'entrepôt est requis.'; return }
+      if (!this.form.lignes.length)  { this.erreurModal = 'Ajoutez au moins une ligne de produit.'; return }
+
+      // Vérifier chaque ligne
+      for (let i = 0; i < this.form.lignes.length; i++) {
+        const l = this.form.lignes[i]
+        if (!l.produitId || l.produitId === '' || l.produitId === 0) {
+          this.erreurModal = `Ligne ${i + 1} : sélectionnez un produit.`
+          return
+        }
+        if (!l.quantite || l.quantite < 1) {
+          this.erreurModal = `Ligne ${i + 1} : la quantité doit être au moins 1.`
+          return
+        }
+      }
+
+      // Construire le payload propre — conversion explicite en entiers
+      const toInt = v => { const n = parseInt(v, 10); return isNaN(n) ? null : n }
+      const toFloat = v => { const n = parseFloat(v); return isNaN(n) ? 0 : n }
+
+      const payload = {
+        fournisseurId: toInt(this.form.fournisseurId),
+        entrepotId:    toInt(this.form.entrepotId),
+        dateLivraisonSouhaitee: this.form.dateLivraisonSouhaitee || null,
+        commentaire:   this.form.commentaire || '',
+        lignes: this.form.lignes.map(l => ({
+          produitId:    toInt(l.produitId),
+          quantite:     toInt(l.quantite) || 1,
+          prixUnitaire: toFloat(l.prixUnitaire)
+        }))
+      }
+
+      // Vérification finale après conversion
+      if (!payload.fournisseurId) { this.erreurModal = 'Fournisseur invalide. Veuillez sélectionner un fournisseur.'; return }
+      if (!payload.entrepotId)    { this.erreurModal = 'Entrepôt invalide. Veuillez sélectionner un entrepôt.'; return }
+      for (let i = 0; i < payload.lignes.length; i++) {
+        if (!payload.lignes[i].produitId || payload.lignes[i].produitId <= 0) {
+          this.erreurModal = `Ligne ${i + 1} : veuillez sélectionner un produit.`
+          return
+        }
+      }
+
       this.chargementAction = true
       try {
         if (this.modeEdition) {
-          await commandeApi.modifier(this.commandeEditId, this.form)
+          await commandeApi.modifier(this.commandeEditId, payload)
           this.afficherToast('Commande mise à jour avec succès.', 'succes')
         } else {
-          await commandeApi.creer(this.form)
+          await commandeApi.creer(payload)
           this.afficherToast('Commande créée en brouillon.', 'succes')
         }
         this.modal = false
         await this.charger()
       } catch (e) {
-        const msg = e.response?.data?.message || e.response?.data?.erreurs
-          ? Object.values(e.response.data.erreurs || {}).join(', ')
-          : null
-        this.erreurModal = msg || 'Une erreur est survenue. Vérifiez les champs et réessayez.'
+        const data = e.response?.data
+        if (data?.erreurs) {
+          this.erreurModal = Object.values(data.erreurs).join(' — ')
+        } else if (data?.message) {
+          this.erreurModal = data.message
+        } else {
+          this.erreurModal = 'Une erreur est survenue. Vérifiez les champs et réessayez.'
+        }
       } finally { this.chargementAction = false }
     },
     demanderAction(cmd, action) {
@@ -406,7 +457,12 @@ export default {
     formaterDate(d) {
       if (!d) return '—'
       const dt = new Date(d)
-      return isNaN(dt) ? '—' : dt.toLocaleString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })
+      if (isNaN(dt)) return '—'
+      // LocalDate (YYYY-MM-DD) — pas d'heure
+      if (typeof d === 'string' && d.length === 10) {
+        return dt.toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric' })
+      }
+      return dt.toLocaleString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })
     },
     formaterMontant(v) {
       return new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR' }).format(v || 0)

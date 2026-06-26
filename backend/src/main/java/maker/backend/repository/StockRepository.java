@@ -17,6 +17,7 @@ public interface StockRepository extends JpaRepository<Stock, Long> {
     Optional<Stock> findByProduitAndEntrepot(Produit produit, Entrepot entrepot);
     List<Stock> findByEntrepot(Entrepot entrepot);
     List<Stock> findByZone(ZoneFr zone);
+    List<Stock> findByProduit(Produit produit);
 
     @Query("SELECT COALESCE(SUM(s.quantiteDisponible * s.produit.volume), 0) FROM Stock s WHERE s.entrepot = :entrepot AND s.produit.volume IS NOT NULL")
     Double sumEspaceUtiliseByEntrepot(@Param("entrepot") Entrepot entrepot);

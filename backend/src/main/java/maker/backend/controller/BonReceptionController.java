@@ -1,6 +1,7 @@
 package maker.backend.controller;
 
 import jakarta.validation.Valid;
+import maker.backend.config.Tracable;
 import maker.backend.dto.BonReceptionDTO;
 import maker.backend.service.BonReceptionService;
 import org.springframework.http.HttpStatus;
@@ -31,16 +32,19 @@ public class BonReceptionController {
     }
 
     @PostMapping
+    @Tracable(entite = "BonReception", action = "CREER")
     public ResponseEntity<BonReceptionDTO> creer(@Valid @RequestBody BonReceptionDTO dto) {
         return ResponseEntity.status(HttpStatus.CREATED).body(service.creer(dto));
     }
 
     @PutMapping("/{id}")
+    @Tracable(entite = "BonReception", action = "MODIFIER")
     public BonReceptionDTO modifier(@PathVariable Long id, @Valid @RequestBody BonReceptionDTO dto) {
         return service.modifier(id, dto);
     }
 
     @PostMapping("/{id}/valider")
+    @Tracable(entite = "BonReception", action = "VALIDER")
     public BonReceptionDTO valider(@PathVariable Long id) {
         return service.valider(id);
     }

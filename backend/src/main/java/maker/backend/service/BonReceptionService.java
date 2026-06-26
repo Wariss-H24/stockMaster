@@ -111,6 +111,13 @@ public class BonReceptionService {
             Stock stock = stockService.findOrCreateStock(
                     ligne.getProduit().getId(), bon.getEntrepot().getId(), bon.getZone() != null ? bon.getZone().getId() : null);
             stock.setQuantiteDisponible(stock.getQuantiteDisponible() + ligne.getQuantite());
+
+            // Appliquer le stockMinDefaut du produit si le seuil du stock est encore à 0
+            if (stock.getStockMin() == 0 && ligne.getProduit().getStockMinDefaut() != null
+                    && ligne.getProduit().getStockMinDefaut() > 0) {
+                stock.setStockMin(ligne.getProduit().getStockMinDefaut());
+            }
+
             stockService.save(stock);
 
             MouvementStock mouvement = new MouvementStock();

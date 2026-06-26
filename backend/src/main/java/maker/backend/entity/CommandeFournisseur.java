@@ -3,6 +3,7 @@ package maker.backend.entity;
 import jakarta.persistence.*;
 import lombok.Data;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
@@ -47,8 +48,8 @@ public class CommandeFournisseur {
     private LocalDateTime dateEnvoi;
     private LocalDateTime dateReception;
 
-    /** Date de livraison souhaitée */
-    private LocalDateTime dateLivraisonSouhaitee;
+    /** Date de livraison souhaitée (date seule, sans heure) */
+    private LocalDate dateLivraisonSouhaitee;
 
     @OneToMany(mappedBy = "commande", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<CommandeLigne> lignes = new ArrayList<>();

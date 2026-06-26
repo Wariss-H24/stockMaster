@@ -3,10 +3,12 @@ package maker.backend.service;
 import maker.backend.dto.ProduitDTO;
 import maker.backend.entity.Categorie;
 import maker.backend.entity.Produit;
+import maker.backend.entity.Stock;
 import maker.backend.exception.ResourceNotFoundException;
 import maker.backend.mapper.ProduitMapper;
 import maker.backend.repository.CategorieRepository;
 import maker.backend.repository.ProduitRepository;
+import maker.backend.repository.StockRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -19,11 +21,16 @@ public class ProduitService {
 
     private final ProduitRepository repo;
     private final CategorieRepository categorieRepo;
+    private final StockRepository stockRepo;
     private final ProduitMapper mapper;
 
-    public ProduitService(ProduitRepository repo, CategorieRepository categorieRepo, ProduitMapper mapper) {
+    public ProduitService(ProduitRepository repo,
+                          CategorieRepository categorieRepo,
+                          StockRepository stockRepo,
+                          ProduitMapper mapper) {
         this.repo = repo;
         this.categorieRepo = categorieRepo;
+        this.stockRepo = stockRepo;
         this.mapper = mapper;
     }
 
@@ -56,7 +63,17 @@ public class ProduitService {
         existing.setPrixVente(dto.getPrixVente());
         existing.setPoids(dto.getPoids());
         existing.setVolume(dto.getVolume());
-        return mapper.toDTO(repo.save(existing));
+
+        // Mettre à jour le stockMin sur le produit
+        int nouveauMin = dto.getStockMinDefaut() != null ? dto.getStockMinDefaut() : 0;
+        existing.setStockMinDefaut(nouveauMin);
+
+        Produit saved = repo.save(existing);
+
+        // Propager le nouveau seuil sur tous les stocks existants de ce produit
+        propagerStockMin(saved, nouveauMin);
+
+        return mapper.toDTO(saved);
     }
 
     public void supprimerLogique(Long id) {
@@ -64,6 +81,15 @@ public class ProduitService {
                 .orElseThrow(() -> new ResourceNotFoundException("Produit introuvable : " + id));
         p.setSupprime(true);
         repo.save(p);
+    }
+
+    /** Propage le stockMin sur tous les stocks enregistrés pour ce produit. */
+    private void propagerStockMin(Produit produit, int stockMin) {
+        List<Stock> stocks = stockRepo.findByProduit(produit);
+        for (Stock s : stocks) {
+            s.setStockMin(stockMin);
+        }
+        stockRepo.saveAll(stocks);
     }
 
     private Categorie resolveCategorie(Long categorieId) {
