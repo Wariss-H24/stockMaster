@@ -22,6 +22,16 @@ public class BonReceptionDTO {
 
     private Long zoneId;
     private String zoneNom;
+
+    // Module 17 — Hiérarchie emplacement
+    private Long rayonId;
+    private String rayonNom;
+    private Long etagereId;
+    private String etagereNom;
+    private Long emplacementId;
+    private String emplacementCode;
+    private String emplacementCodeComplet;
+
     private String commentaire;
     private String statut;
     private boolean controleQualiteOk;

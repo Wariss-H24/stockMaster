@@ -19,6 +19,8 @@ import AlertesPage from '../views/AlertesPage.vue'
 import ReportingPage from '../views/ReportingPage.vue'
 import TracabilitePage from '../views/TracabilitePage.vue'
 import CommandesFournisseursPage from '../views/CommandesFournisseursPage.vue'
+// Module 17
+import EmplacementsPage from '../views/EmplacementsPage.vue'
 
 const routes = [
   { path: '/login', component: LoginPage, meta: { public: true } },
@@ -34,7 +36,8 @@ const routes = [
   { path: '/mouvements-stock',      component: MouvementsStockPage,        meta: { requiertAuth: true } },
   { path: '/bon-receptions',        component: BonReceptionsPage,          meta: { requiertAuth: true } },
   { path: '/bon-sorties',           component: BonSortiesPage,             meta: { requiertAuth: true } },
-  { path: '/transferts',            component: TransfertsPage,             meta: { requiertAuth: true, roles: ['ADMIN','GESTIONNAIRE'] } },
+  // Transferts : MAGASINIER inclus
+  { path: '/transferts',            component: TransfertsPage,             meta: { requiertAuth: true, roles: ['ADMIN','GESTIONNAIRE','MAGASINIER'] } },
 
   // ── Modules 11–16 ─────────────────────────────────────────────────────────
   { path: '/inventaires',           component: InventairesPage,            meta: { requiertAuth: true, roles: ['ADMIN','GESTIONNAIRE'] } },
@@ -42,6 +45,8 @@ const routes = [
   { path: '/reporting',             component: ReportingPage,              meta: { requiertAuth: true } },
   { path: '/tracabilite',           component: TracabilitePage,            meta: { requiertAuth: true, roles: ['ADMIN','AUDITEUR'] } },
   { path: '/commandes-fournisseurs',component: CommandesFournisseursPage,  meta: { requiertAuth: true, roles: ['ADMIN','GESTIONNAIRE'] } },
+  // Module 17 — emplacements : ADMIN + GESTIONNAIRE créent, MAGASINIER consulte
+  { path: '/emplacements', component: EmplacementsPage, meta: { requiertAuth: true, roles: ['ADMIN','GESTIONNAIRE','MAGASINIER'] } },
 
   // Administration ADMIN uniquement
   { path: '/utilisateurs', component: UtilisateursPage, meta: { requiertAuth: true, roles: ['ADMIN'] } }

@@ -2,7 +2,7 @@ package maker.backend.entity;
 
 import jakarta.persistence.*;
 import jakarta.validation.constraints.Min;
-import lombok.Data;
+import lombok.Data;import lombok.Data;
 
 @Entity
 @Table(name = "stocks", uniqueConstraints = {
@@ -26,6 +26,11 @@ public class Stock {
     @ManyToOne
     @JoinColumn(name = "zone_id")
     private ZoneFr zone;
+
+    /** Module 17 — Emplacement précis (optionnel) */
+    @ManyToOne
+    @JoinColumn(name = "emplacement_id")
+    private Emplacement emplacement;
 
     @Min(0)
     private Integer quantiteDisponible = 0;

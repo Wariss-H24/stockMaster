@@ -20,6 +20,7 @@ public class BonReceptionService {
     private final EntrepotRepository entrepotRepo;
     private final ZoneFrRepository zoneRepo;
     private final ProduitRepository produitRepo;
+    private final EmplacementRepository emplacementRepo;
     private final StockService stockService;
     private final MouvementStockService mouvementService;
 
@@ -28,6 +29,7 @@ public class BonReceptionService {
                                EntrepotRepository entrepotRepo,
                                ZoneFrRepository zoneRepo,
                                ProduitRepository produitRepo,
+                               EmplacementRepository emplacementRepo,
                                StockService stockService,
                                MouvementStockService mouvementService) {
         this.repo = repo;
@@ -35,6 +37,7 @@ public class BonReceptionService {
         this.entrepotRepo = entrepotRepo;
         this.zoneRepo = zoneRepo;
         this.produitRepo = produitRepo;
+        this.emplacementRepo = emplacementRepo;
         this.stockService = stockService;
         this.mouvementService = mouvementService;
     }
@@ -56,8 +59,7 @@ public class BonReceptionService {
     public BonReceptionDTO creer(BonReceptionDTO dto) {
         BonReception bon = toEntity(dto);
         bon.setStatut(BonReception.Statut.BROUILLON);
-        BonReception saved = repo.save(bon);
-        return toDTO(saved);
+        return toDTO(repo.save(bon));
     }
 
     public BonReceptionDTO modifier(Long id, BonReceptionDTO dto) {
@@ -69,25 +71,23 @@ public class BonReceptionService {
         existing.setFournisseur(findFournisseur(dto.getFournisseurId()));
         existing.setEntrepot(findEntrepot(dto.getEntrepotId()));
         existing.setZone(findZone(dto.getZoneId()));
+        existing.setEmplacement(findEmplacement(dto.getEmplacementId()));
         existing.setCommentaire(dto.getCommentaire());
         existing.setControleQualiteOk(dto.isControleQualiteOk());
         existing.getLignes().clear();
-        dto.getLignes().forEach(ligneDTO -> existing.getLignes().add(toEntity(ligneDTO, existing)));
+        dto.getLignes().forEach(l -> existing.getLignes().add(toEntity(l, existing)));
         return toDTO(repo.save(existing));
     }
 
     public BonReceptionDTO valider(Long id) {
         BonReception bon = repo.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Bon de réception introuvable : " + id));
-        if (bon.getStatut() != BonReception.Statut.BROUILLON) {
+        if (bon.getStatut() != BonReception.Statut.BROUILLON)
             throw new IllegalArgumentException("Le bon doit être en brouillon pour être validé.");
-        }
-        if (bon.getLignes().isEmpty()) {
+        if (bon.getLignes().isEmpty())
             throw new IllegalArgumentException("Le bon doit contenir au moins une ligne.");
-        }
-        if (!bon.getControleQualiteOk()) {
-            throw new IllegalArgumentException("Le contrôle qualité doit être validé avant de confirmer la réception.");
-        }
+        if (!bon.getControleQualiteOk())
+            throw new IllegalArgumentException("Le contrôle qualité doit être validé avant la réception.");
         bon.setStatut(BonReception.Statut.VALIDE);
         appliquerReception(bon);
         return toDTO(repo.save(bon));
@@ -96,42 +96,46 @@ public class BonReceptionService {
     public void supprimer(Long id) {
         BonReception bon = repo.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Bon de réception introuvable : " + id));
-        if (bon.getStatut() != BonReception.Statut.BROUILLON) {
+        if (bon.getStatut() != BonReception.Statut.BROUILLON)
             throw new IllegalArgumentException("Seuls les bons en brouillon peuvent être supprimés.");
-        }
         repo.delete(bon);
     }
 
     private void appliquerReception(BonReception bon) {
         for (ReceptionLigne ligne : bon.getLignes()) {
-            // Vérifier la capacité avant d'ajouter
             stockService.verifierCapaciteDisponible(
                 bon.getEntrepot(), bon.getZone(), ligne.getProduit(), ligne.getQuantite());
 
-            Stock stock = stockService.findOrCreateStock(
-                    ligne.getProduit().getId(), bon.getEntrepot().getId(), bon.getZone() != null ? bon.getZone().getId() : null);
+            // Chercher/créer le stock en tenant compte de l'emplacement
+            Stock stock = stockService.findOrCreateStockAvecEmplacement(
+                ligne.getProduit().getId(),
+                bon.getEntrepot().getId(),
+                bon.getZone() != null ? bon.getZone().getId() : null,
+                bon.getEmplacement() != null ? bon.getEmplacement().getId() : null
+            );
             stock.setQuantiteDisponible(stock.getQuantiteDisponible() + ligne.getQuantite());
 
-            // Appliquer le stockMinDefaut du produit si le seuil du stock est encore à 0
+            // Appliquer stockMinDefaut si non défini
             if (stock.getStockMin() == 0 && ligne.getProduit().getStockMinDefaut() != null
                     && ligne.getProduit().getStockMinDefaut() > 0) {
                 stock.setStockMin(ligne.getProduit().getStockMinDefaut());
             }
-
             stockService.save(stock);
 
-            MouvementStock mouvement = new MouvementStock();
-            mouvement.setStock(stock);
-            mouvement.setType(MouvementStock.Type.ENTREE);
-            mouvement.setQuantite(ligne.getQuantite());
-            mouvement.setSource(bon.getFournisseur().getNom());
-            mouvement.setCommentaire("Réception validée");
-            mouvementService.enregistrer(mouvement);
+            MouvementStock m = new MouvementStock();
+            m.setStock(stock);
+            m.setType(MouvementStock.Type.ENTREE);
+            m.setQuantite(ligne.getQuantite());
+            m.setSource(bon.getFournisseur().getNom());
+            m.setCommentaire("Réception validée" + (bon.getEmplacement() != null
+                ? " → " + EmplacementService.buildCodeComplet(bon.getEmplacement()) : ""));
+            mouvementService.enregistrer(m);
         }
-        // Recalcul des capacités utilisées après réception
         stockService.recalculerCapaciteZone(bon.getZone());
         stockService.recalculerCapaciteEntrepot(bon.getEntrepot());
     }
+
+    // ── DTOs ──────────────────────────────────────────────────────────────────
 
     private BonReceptionDTO toDTO(BonReception bon) {
         BonReceptionDTO dto = new BonReceptionDTO();
@@ -140,20 +144,34 @@ public class BonReceptionService {
         dto.setFournisseurNom(bon.getFournisseur().getNom());
         dto.setEntrepotId(bon.getEntrepot().getId());
         dto.setEntrepotNom(bon.getEntrepot().getNom());
-        dto.setZoneId(bon.getZone() != null ? bon.getZone().getId() : null);
-        dto.setZoneNom(bon.getZone() != null ? bon.getZone().getNom() : null);
+        if (bon.getZone() != null) {
+            dto.setZoneId(bon.getZone().getId());
+            dto.setZoneNom(bon.getZone().getNom());
+        }
+        if (bon.getEmplacement() != null) {
+            Emplacement emp = bon.getEmplacement();
+            dto.setEmplacementId(emp.getId());
+            dto.setEmplacementCode(emp.getCode());
+            dto.setEmplacementCodeComplet(EmplacementService.buildCodeComplet(emp));
+            dto.setRayonId(emp.getEtagere().getRayon().getId());
+            dto.setRayonNom(emp.getEtagere().getRayon().getNom());
+            dto.setEtagereId(emp.getEtagere().getId());
+            dto.setEtagereNom(emp.getEtagere().getNom());
+        }
         dto.setCommentaire(bon.getCommentaire());
         dto.setStatut(bon.getStatut().name());
         dto.setControleQualiteOk(Boolean.TRUE.equals(bon.getControleQualiteOk()));
         dto.setDate(bon.getDate() != null ? bon.getDate().toString() : null);
-        dto.setLignes(bon.getLignes().stream().map(this::toDTO).collect(Collectors.toList()));
+        dto.setLignes(bon.getLignes().stream().map(this::toLigneDTO).collect(Collectors.toList()));
         return dto;
     }
 
-    private ReceptionLigneDTO toDTO(ReceptionLigne ligne) {
+    private ReceptionLigneDTO toLigneDTO(ReceptionLigne ligne) {
         ReceptionLigneDTO dto = new ReceptionLigneDTO();
         dto.setId(ligne.getId());
         dto.setProduitId(ligne.getProduit().getId());
+        dto.setProduitNom(ligne.getProduit().getNom());
+        dto.setProduitReference(ligne.getProduit().getReference());
         dto.setQuantite(ligne.getQuantite());
         dto.setPrixAchat(ligne.getPrixAchat());
         return dto;
@@ -164,9 +182,10 @@ public class BonReceptionService {
         bon.setFournisseur(findFournisseur(dto.getFournisseurId()));
         bon.setEntrepot(findEntrepot(dto.getEntrepotId()));
         bon.setZone(findZone(dto.getZoneId()));
+        bon.setEmplacement(findEmplacement(dto.getEmplacementId()));
         bon.setCommentaire(dto.getCommentaire());
         bon.setControleQualiteOk(dto.isControleQualiteOk());
-        dto.getLignes().forEach(ligneDTO -> bon.getLignes().add(toEntity(ligneDTO, bon)));
+        dto.getLignes().forEach(l -> bon.getLignes().add(toEntity(l, bon)));
         return bon;
     }
 
@@ -184,14 +203,16 @@ public class BonReceptionService {
         return fournisseurRepo.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Fournisseur introuvable : " + id));
     }
-
     private Entrepot findEntrepot(Long id) {
         return entrepotRepo.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Entrepôt introuvable : " + id));
     }
-
     private ZoneFr findZone(Long id) {
         return id == null ? null : zoneRepo.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Zone introuvable : " + id));
+    }
+    private Emplacement findEmplacement(Long id) {
+        return id == null ? null : emplacementRepo.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Emplacement introuvable : " + id));
     }
 }

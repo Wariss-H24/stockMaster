@@ -10,6 +10,11 @@ public class SortieLigneDTO {
 
     @NotNull(message = "Le produit est requis")
     private Long produitId;
+    private String produitNom;
+    private String produitReference;
+
+    /** Code complet de l'emplacement où se trouve ce produit */
+    private String emplacementCodeComplet;
 
     @Min(value = 1, message = "La quantité doit être au moins 1")
     private Integer quantite;

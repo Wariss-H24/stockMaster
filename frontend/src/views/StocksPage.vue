@@ -64,17 +64,17 @@
         <table>
           <thead>
             <tr>
-              <th>Produit</th><th>Entrepôt</th><th>Zone</th>
+              <th>Produit</th><th>Entrepôt</th><th>Zone</th><th>Emplacement</th>
               <th>Disponible</th><th>Réservé</th><th>Transit</th>
               <th>Stock Min</th><th>État</th>
             </tr>
           </thead>
           <tbody>
             <tr v-if="chargement">
-              <td colspan="8" class="empty-state">Chargement...</td>
+              <td colspan="9" class="empty-state">Chargement...</td>
             </tr>
             <tr v-else-if="listeFiltree.length === 0">
-              <td colspan="8" class="empty-state">Aucun stock trouvé.</td>
+              <td colspan="9" class="empty-state">Aucun stock trouvé.</td>
             </tr>
             <tr v-for="s in listeFiltree" :key="s.id" :class="{ 'row-critical': estCritique(s) }">
               <td>
@@ -84,6 +84,11 @@
               <td>{{ s.entrepotNom }}</td>
               <td>{{ s.zoneNom || '—' }}</td>
               <td>
+                <span v-if="s.emplacementCodeComplet" class="emp-code" :title="s.emplacementCodeComplet">
+                  {{ s.emplacementCodeComplet.split('/').pop() }}
+                </span>
+                <span v-else style="color:var(--gray-300);font-size:.8rem;">—</span>
+              </td>              <td>
                 <span :style="estCritique(s) ? 'color:var(--danger);font-weight:700;' : 'font-weight:600;'">
                   {{ s.quantiteDisponible }}
                 </span>
@@ -169,4 +174,10 @@ export default {
 }
 .pill.active { background: var(--navy); color: #fff; border-color: var(--navy); }
 .pill:hover:not(.active) { background: var(--gray-50); }
+.emp-code {
+  font-size: .76rem; font-family: monospace; font-weight: 600;
+  background: var(--navy-xlight); color: var(--navy);
+  padding: 2px 7px; border-radius: 4px;
+  cursor: default;
+}
 </style>

@@ -100,7 +100,7 @@
           </svg>
           <span>Bons sortie</span>
         </router-link>
-        <router-link v-if="auth.aUnRole('ADMIN', 'GESTIONNAIRE')" to="/transferts" class="nav-item" @click="sidebarOuverte = false">
+        <router-link v-if="auth.aUnRole('ADMIN','GESTIONNAIRE','MAGASINIER')" to="/transferts" class="nav-item" @click="sidebarOuverte = false">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
             <path d="M4 12h7" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
             <path d="M13 6l5 6-5 6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
@@ -109,9 +109,21 @@
           <span>Transferts</span>
         </router-link>
 
-        <!-- Section Avancé : M11–M16 -->
+        <!-- Section Avancé : M11–M17 -->
         <p class="nav-section-label">Avancé</p>
 
+        <!-- Emplacements : MAGASINIER peut consulter -->
+        <router-link v-if="auth.aUnRole('ADMIN','GESTIONNAIRE','MAGASINIER')" to="/emplacements" class="nav-item" @click="sidebarOuverte = false">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+            <rect x="3" y="3" width="7" height="7" rx="1" stroke="currentColor" stroke-width="1.8"/>
+            <rect x="14" y="3" width="7" height="7" rx="1" stroke="currentColor" stroke-width="1.8"/>
+            <rect x="3" y="14" width="7" height="7" rx="1" stroke="currentColor" stroke-width="1.8"/>
+            <rect x="14" y="14" width="7" height="7" rx="1" stroke="currentColor" stroke-width="1.8"/>
+          </svg>
+          <span>Emplacements</span>
+        </router-link>
+
+        <!-- Inventaires : ADMIN + GESTIONNAIRE -->
         <router-link v-if="auth.aUnRole('ADMIN','GESTIONNAIRE')" to="/inventaires" class="nav-item" @click="sidebarOuverte = false">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
             <path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2" stroke="currentColor" stroke-width="1.8"/>
@@ -249,6 +261,7 @@ export default {
         '/reporting':                'Reporting & Exports',
         '/tracabilite':              'Traçabilité & Audit',
         '/commandes-fournisseurs':   'Commandes fournisseurs',
+        '/emplacements':             'Emplacements',
         '/utilisateurs':             'Utilisateurs'
       }
       const path = this.$route.path

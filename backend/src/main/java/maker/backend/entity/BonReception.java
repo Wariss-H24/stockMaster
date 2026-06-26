@@ -32,6 +32,11 @@ public class BonReception {
     @JoinColumn(name = "zone_id")
     private ZoneFr zone;
 
+    /** Module 17 — Emplacement précis de rangement */
+    @ManyToOne
+    @JoinColumn(name = "emplacement_id")
+    private Emplacement emplacement;
+
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     private Statut statut = Statut.BROUILLON;

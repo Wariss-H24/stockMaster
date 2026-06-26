@@ -7,6 +7,7 @@ import maker.backend.entity.Stock;
 import maker.backend.entity.ZoneFr;
 import maker.backend.exception.ResourceNotFoundException;
 import maker.backend.mapper.StockMapper;
+import maker.backend.repository.EmplacementRepository;
 import maker.backend.repository.EntrepotRepository;
 import maker.backend.repository.ProduitRepository;
 import maker.backend.repository.StockRepository;
@@ -26,17 +27,20 @@ public class StockService {
     private final ProduitRepository produitRepo;
     private final EntrepotRepository entrepotRepo;
     private final ZoneFrRepository zoneRepo;
+    private final EmplacementRepository emplacementRepo;
     private final StockMapper mapper;
 
     public StockService(StockRepository repo,
                         ProduitRepository produitRepo,
                         EntrepotRepository entrepotRepo,
                         ZoneFrRepository zoneRepo,
+                        EmplacementRepository emplacementRepo,
                         StockMapper mapper) {
         this.repo = repo;
         this.produitRepo = produitRepo;
         this.entrepotRepo = entrepotRepo;
         this.zoneRepo = zoneRepo;
+        this.emplacementRepo = emplacementRepo;
         this.mapper = mapper;
     }
 
@@ -50,23 +54,42 @@ public class StockService {
     }
 
     public Stock findOrCreateStock(Long produitId, Long entrepotId, Long zoneId) {
+        return findOrCreateStockAvecEmplacement(produitId, entrepotId, zoneId, null);
+    }
+
+    public Stock findOrCreateStockAvecEmplacement(Long produitId, Long entrepotId, Long zoneId, Long emplacementId) {
         Produit produit = produitRepo.findById(produitId)
                 .orElseThrow(() -> new ResourceNotFoundException("Produit introuvable : " + produitId));
         Entrepot entrepot = entrepotRepo.findById(entrepotId)
                 .orElseThrow(() -> new ResourceNotFoundException("Entrepôt introuvable : " + entrepotId));
-        ZoneFr zone = null;
-        if (zoneId != null) {
-            zone = zoneRepo.findById(zoneId)
-                    .orElseThrow(() -> new ResourceNotFoundException("Zone introuvable : " + zoneId));
-        }
+        ZoneFr zone = zoneId != null
+                ? zoneRepo.findById(zoneId).orElseThrow(() -> new ResourceNotFoundException("Zone introuvable : " + zoneId))
+                : null;
         final ZoneFr zoneFinal = zone;
+
+        // Chercher l'emplacement réel depuis la DB si fourni
+        maker.backend.entity.Emplacement emplacement = null;
+        if (emplacementId != null) {
+            // Récupération via le repository — on utilise EmplacementRepository injecté
+            emplacement = emplacementRepo.findById(emplacementId)
+                    .orElseThrow(() -> new ResourceNotFoundException("Emplacement introuvable : " + emplacementId));
+        }
+        final maker.backend.entity.Emplacement emplacementFinal = emplacement;
+
         return repo.findByProduitAndEntrepotAndZone(produit, entrepot, zoneFinal)
                 .or(() -> repo.findByProduitAndEntrepot(produit, entrepot))
+                .map(s -> {
+                    if (emplacementFinal != null && s.getEmplacement() == null) {
+                        s.setEmplacement(emplacementFinal);
+                    }
+                    return s;
+                })
                 .orElseGet(() -> {
                     Stock stock = new Stock();
                     stock.setProduit(produit);
                     stock.setEntrepot(entrepot);
                     stock.setZone(zoneFinal);
+                    stock.setEmplacement(emplacementFinal);
                     stock.setQuantiteDisponible(0);
                     stock.setQuantiteReservee(0);
                     stock.setQuantiteTransit(0);

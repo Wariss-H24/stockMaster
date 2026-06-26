@@ -157,3 +157,31 @@ export const commandeApi = {
   annuler:      (id)          => api.patch(`/commandes-fournisseurs/${id}/annuler`),
   supprimer:    (id)          => api.delete(`/commandes-fournisseurs/${id}`)
 }
+
+// ── Module 17 — Emplacements ─────────────────────────────────────────────
+export const rayonApi = {
+  findAll:    (zoneId)    => api.get('/rayons', { params: zoneId ? { zoneId } : {} }),
+  findById:   (id)        => api.get(`/rayons/${id}`),
+  creer:      (dto)       => api.post('/rayons', dto),
+  modifier:   (id, dto)   => api.put(`/rayons/${id}`, dto),
+  desactiver: (id)        => api.delete(`/rayons/${id}`)
+}
+
+export const etagereApi = {
+  findAll:    (rayonId)   => api.get('/etageres', { params: rayonId ? { rayonId } : {} }),
+  findById:   (id)        => api.get(`/etageres/${id}`),
+  creer:      (dto)       => api.post('/etageres', dto),
+  modifier:   (id, dto)   => api.put(`/etageres/${id}`, dto),
+  desactiver: (id)        => api.delete(`/etageres/${id}`)
+}
+
+export const emplacementApi = {
+  findAll:           (params)   => api.get('/emplacements', { params: params || {} }),
+  findByEntrepot:    (id)       => api.get('/emplacements', { params: { entrepotId: id } }),
+  findByZone:        (id)       => api.get('/emplacements', { params: { zoneId: id } }),
+  findByEtagere:     (id)       => api.get('/emplacements', { params: { etagereId: id } }),
+  findById:          (id)       => api.get(`/emplacements/${id}`),
+  creer:             (dto)      => api.post('/emplacements', dto),
+  modifier:          (id, dto)  => api.put(`/emplacements/${id}`, dto),
+  desactiver:        (id)       => api.delete(`/emplacements/${id}`)
+}
