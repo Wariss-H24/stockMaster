@@ -438,7 +438,7 @@ export default {
         await this.charger()
         const msgs = {
           envoyer: 'Commande envoyée au fournisseur.',
-          receptionner: 'Réception enregistrée — stocks mis à jour.',
+          receptionner: 'Bon de réception créé avec succès.',
           annuler: 'Commande annulée.',
           supprimer: 'Commande supprimée.'
         }

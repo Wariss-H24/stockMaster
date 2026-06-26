@@ -157,6 +157,24 @@
           <span>Traçabilité</span>
         </router-link>
 
+        <router-link to="/emplacements" class="nav-item" @click="sidebarOuverte = false">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+            <path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z" stroke="currentColor" stroke-width="1.8"/>
+            <rect x="9" y="14" width="6" height="7" rx="1" stroke="currentColor" stroke-width="1.8"/>
+          </svg>
+          <span>Emplacements</span>
+        </router-link>
+
+        <router-link to="/qr-codes" class="nav-item" @click="sidebarOuverte = false">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+            <rect x="3" y="3" width="7" height="7" rx="1" stroke="currentColor" stroke-width="1.8"/>
+            <rect x="14" y="3" width="7" height="7" rx="1" stroke="currentColor" stroke-width="1.8"/>
+            <rect x="3" y="14" width="7" height="7" rx="1" stroke="currentColor" stroke-width="1.8"/>
+            <path d="M14 14h3v3M17 17v3h3M14 20h3" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+          </svg>
+          <span>QR Codes</span>
+        </router-link>
+
         <!-- Section Admin -->
         <template v-if="auth.aRole('ADMIN')">
           <p class="nav-section-label">Administration</p>
@@ -249,6 +267,8 @@ export default {
         '/reporting':                'Reporting & Exports',
         '/tracabilite':              'Traçabilité & Audit',
         '/commandes-fournisseurs':   'Commandes fournisseurs',
+        '/emplacements':             'Emplacements',
+        '/qr-codes':                 'QR Codes & Codes-barres',
         '/utilisateurs':             'Utilisateurs'
       }
       const path = this.$route.path

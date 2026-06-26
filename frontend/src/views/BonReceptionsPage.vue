@@ -39,12 +39,7 @@
           </svg>
           <input v-model="recherche" placeholder="Rechercher par fournisseur, entrepôt, statut..." />
         </div>
-        <button v-if="peutEcrire" class="btn btn-primary" @click="ouvrirModal()">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
-            <path d="M12 5v14M5 12h14" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/>
-          </svg>
-          Nouveau bon
-        </button>
+
       </div>
 
       <div class="table-wrap">
@@ -86,7 +81,7 @@
     <div class="modal-overlay" v-if="modal" @click.self="modal = false">
       <div class="modal large-modal">
         <div class="modal-header">
-          <h3 class="modal-title">{{ form.id ? 'Modifier le bon de réception' : 'Nouveau bon de réception' }}</h3>
+          <h3 class="modal-title">Bon de réception #{{ form.id }}</h3>
           <button class="modal-close" @click="modal = false">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M6 6l12 12M18 6L6 18" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
           </button>
@@ -261,8 +256,7 @@ export default {
         if (this.form.lignes.length === 0) throw new Error('Ajoutez au moins une ligne de réception.')
         if (this.form.lignes.some(l => !l.produitId || l.quantite < 1))
           throw new Error('Chaque ligne doit contenir un produit et une quantité valide.')
-        if (this.form.id) await receptionApi.modifier(this.form.id, this.form)
-        else await receptionApi.creer(this.form)
+        await receptionApi.modifier(this.form.id, this.form)
         this.modal = false
         await this.charger()
       } catch (e) {

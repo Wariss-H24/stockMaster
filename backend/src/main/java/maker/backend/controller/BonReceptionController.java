@@ -4,7 +4,6 @@ import jakarta.validation.Valid;
 import maker.backend.config.Tracable;
 import maker.backend.dto.BonReceptionDTO;
 import maker.backend.service.BonReceptionService;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -31,11 +30,8 @@ public class BonReceptionController {
         return service.findById(id);
     }
 
-    @PostMapping
-    @Tracable(entite = "BonReception", action = "CREER")
-    public ResponseEntity<BonReceptionDTO> creer(@Valid @RequestBody BonReceptionDTO dto) {
-        return ResponseEntity.status(HttpStatus.CREATED).body(service.creer(dto));
-    }
+    // La création manuelle est désactivée.
+    // Les bons de réception sont générés automatiquement lors de la réception d'une commande fournisseur.
 
     @PutMapping("/{id}")
     @Tracable(entite = "BonReception", action = "MODIFIER")

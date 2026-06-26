@@ -25,23 +25,20 @@ public class CommandeFournisseurService {
     private final EntrepotRepository entrepotRepo;
     private final ProduitRepository produitRepo;
     private final UtilisateurRepository userRepo;
-    private final StockService stockService;
-    private final MouvementStockService mouvementService;
+    private final BonReceptionRepository bonReceptionRepo;
 
     public CommandeFournisseurService(CommandeFournisseurRepository repo,
                                       FournisseurRepository fournisseurRepo,
                                       EntrepotRepository entrepotRepo,
                                       ProduitRepository produitRepo,
                                       UtilisateurRepository userRepo,
-                                      StockService stockService,
-                                      MouvementStockService mouvementService) {
+                                      BonReceptionRepository bonReceptionRepo) {
         this.repo = repo;
         this.fournisseurRepo = fournisseurRepo;
         this.entrepotRepo = entrepotRepo;
         this.produitRepo = produitRepo;
         this.userRepo = userRepo;
-        this.stockService = stockService;
-        this.mouvementService = mouvementService;
+        this.bonReceptionRepo = bonReceptionRepo;
     }
 
     public List<CommandeFournisseurDTO> findAll() {
@@ -91,29 +88,33 @@ public class CommandeFournisseurService {
         return toDTO(repo.save(cmd));
     }
 
-    /** ENVOYEE → RECUE (met à jour les stocks) */
+    /** ENVOYEE → RECUE : crée automatiquement un bon de réception en BROUILLON */
     public CommandeFournisseurDTO receptionner(Long id) {
         CommandeFournisseur cmd = getOrThrow(id);
         if (cmd.getStatut() != CommandeFournisseur.Statut.ENVOYEE) {
             throw new IllegalArgumentException("Seules les commandes envoyées peuvent être réceptionnées.");
         }
 
-        for (CommandeLigne ligne : cmd.getLignes()) {
-            Stock stock = stockService.findOrCreateStock(
-                    ligne.getProduit().getId(), cmd.getEntrepot().getId(), null);
-            stock.setQuantiteDisponible(stock.getQuantiteDisponible() + ligne.getQuantite());
-            stockService.save(stock);
+        BonReception bon = new BonReception();
+        bon.setFournisseur(cmd.getFournisseur());
+        bon.setEntrepot(cmd.getEntrepot());
+        bon.setCommentaire("Généré automatiquement depuis commande " + cmd.getReference());
+        bon.setStatut(BonReception.Statut.BROUILLON);
+        bon.setControleQualiteOk(false);
 
-            MouvementStock m = new MouvementStock();
-            m.setStock(stock);
-            m.setType(MouvementStock.Type.ENTREE);
-            m.setQuantite(ligne.getQuantite());
-            m.setSource(cmd.getFournisseur().getNom());
-            m.setCommentaire("Réception commande " + cmd.getReference());
-            mouvementService.enregistrer(m);
-        }
+        BonReception bonSauve = bonReceptionRepo.save(bon);
 
-        stockService.recalculerCapaciteEntrepot(cmd.getEntrepot());
+        cmd.getLignes().forEach(ligne -> {
+            ReceptionLigne rl = new ReceptionLigne();
+            rl.setBonReception(bonSauve);
+            rl.setProduit(ligne.getProduit());
+            rl.setQuantite(ligne.getQuantite());
+            rl.setPrixAchat(ligne.getPrixUnitaire());
+            bonSauve.getLignes().add(rl);
+        });
+
+        bonReceptionRepo.save(bonSauve);
+
         cmd.setStatut(CommandeFournisseur.Statut.RECUE);
         cmd.setDateReception(LocalDateTime.now());
         return toDTO(repo.save(cmd));

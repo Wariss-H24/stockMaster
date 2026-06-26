@@ -147,6 +147,22 @@ export const auditApi = {
   parEntite: (entite, id)          => api.get(`/audit/entite/${entite}/${id}`)
 }
 
+export const emplacementApi = {
+  findAll:       ()            => api.get('/emplacements'),
+  findByZone:    (zoneId)      => api.get(`/emplacements/zone/${zoneId}`),
+  findByEntrepot:(entrepotId)  => api.get(`/emplacements/entrepot/${entrepotId}`),
+  disponibles:   ()            => api.get('/emplacements/disponibles'),
+  findById:      (id)          => api.get(`/emplacements/${id}`),
+  creer:         (dto)         => api.post('/emplacements', dto),
+  modifier:      (id, dto)     => api.put(`/emplacements/${id}`, dto),
+  supprimer:     (id)          => api.delete(`/emplacements/${id}`)
+}
+
+export const qrCodeApi = {
+  produit:      (id) => api.get(`/qrcode/produit/${id}`),
+  emplacement:  (id) => api.get(`/qrcode/emplacement/${id}`)
+}
+
 export const commandeApi = {
   findAll:      ()            => api.get('/commandes-fournisseurs'),
   findById:     (id)          => api.get(`/commandes-fournisseurs/${id}`),

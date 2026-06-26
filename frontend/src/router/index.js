@@ -19,6 +19,9 @@ import AlertesPage from '../views/AlertesPage.vue'
 import ReportingPage from '../views/ReportingPage.vue'
 import TracabilitePage from '../views/TracabilitePage.vue'
 import CommandesFournisseursPage from '../views/CommandesFournisseursPage.vue'
+// Modules 17–18
+import EmplacementsPage from '../views/EmplacementsPage.vue'
+import QrCodesPage from '../views/QrCodesPage.vue'
 
 const routes = [
   { path: '/login', component: LoginPage, meta: { public: true } },
@@ -42,6 +45,10 @@ const routes = [
   { path: '/reporting',             component: ReportingPage,              meta: { requiertAuth: true } },
   { path: '/tracabilite',           component: TracabilitePage,            meta: { requiertAuth: true, roles: ['ADMIN','AUDITEUR'] } },
   { path: '/commandes-fournisseurs',component: CommandesFournisseursPage,  meta: { requiertAuth: true, roles: ['ADMIN','GESTIONNAIRE'] } },
+
+  // ── Modules 17–18 ────────────────────────────────────────────────────────
+  { path: '/emplacements',          component: EmplacementsPage,           meta: { requiertAuth: true } },
+  { path: '/qr-codes',              component: QrCodesPage,                meta: { requiertAuth: true } },
 
   // Administration ADMIN uniquement
   { path: '/utilisateurs', component: UtilisateursPage, meta: { requiertAuth: true, roles: ['ADMIN'] } }
