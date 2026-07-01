@@ -81,6 +81,8 @@ public class SecurityConfig {
                 .requestMatchers(HttpMethod.GET, "/api/mouvements-stock/**").authenticated()
                 .requestMatchers(HttpMethod.GET, "/api/dashboard/**").authenticated()
                 .requestMatchers(HttpMethod.GET, "/api/alertes/**").authenticated()
+                // QR Code : accessible à tout utilisateur authentifié (tous rôles)
+                .requestMatchers(HttpMethod.GET, "/api/qr/**").authenticated()
                 .requestMatchers(HttpMethod.GET, "/api/audit/**").hasAnyRole("ADMIN", "AUDITEUR")
                 .requestMatchers(HttpMethod.GET, "/api/reporting/**").hasAnyRole("ADMIN", "GESTIONNAIRE", "AUDITEUR")
                 .requestMatchers(HttpMethod.GET, "/api/**").hasAnyRole("ADMIN", "GESTIONNAIRE", "MAGASINIER", "AUDITEUR")

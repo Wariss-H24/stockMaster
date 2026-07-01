@@ -135,7 +135,10 @@ export default {
           nomComplet: res.data.nomComplet,
           roles: Array.isArray(res.data.roles) ? res.data.roles : Array.from(res.data.roles || [])
         })
-        this.$router.push('/tableau-de-bord')
+        // Rediriger vers la page initiale si un QR a été scanné
+        const redirect = sessionStorage.getItem('sm_redirect_after_login')
+        sessionStorage.removeItem('sm_redirect_after_login')
+        this.$router.push(redirect || '/tableau-de-bord')
       } catch (e) {
         const data = e.response?.data
         if (data?.erreurs) {

@@ -70,6 +70,16 @@
                     </svg>
                     Éditer
                   </button>
+                  <!-- Bouton QR Code -->
+                  <button class="btn btn-outline btn-sm" @click="ouvrirQr(p)" title="Générer QR Code">
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none">
+                      <rect x="3" y="3" width="7" height="7" rx="1" stroke="currentColor" stroke-width="1.8"/>
+                      <rect x="14" y="3" width="7" height="7" rx="1" stroke="currentColor" stroke-width="1.8"/>
+                      <rect x="3" y="14" width="7" height="7" rx="1" stroke="currentColor" stroke-width="1.8"/>
+                      <path d="M14 14h2M14 18h2M18 14h2M18 18h2" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+                    </svg>
+                    QR
+                  </button>
                   <button v-if="peutSupprimer" class="btn btn-danger btn-sm" @click="demanderSuppression(p)">
                     <svg width="13" height="13" viewBox="0 0 24 24" fill="none">
                       <polyline points="3 6 5 6 21 6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
@@ -173,6 +183,30 @@
       @confirmer="confirmerSuppression"
       @annuler="confirm.visible = false"
     />
+
+    <!-- Modal QR Code -->
+    <div class="modal-overlay" v-if="modalQr" @click.self="modalQr = false">
+      <div class="modal" style="max-width:380px;">
+        <div class="modal-header">
+          <h3 class="modal-title">QR Code — {{ produitQr?.nom }}</h3>
+          <button class="modal-close" @click="modalQr = false">✕</button>
+        </div>
+        <div class="modal-body" style="text-align:center;">
+          <img v-if="produitQr" :src="qrUrl(produitQr.id)" :alt="produitQr.nom"
+            style="width:240px;height:240px;border:1px solid var(--gray-200);border-radius:8px;" />
+          <p style="margin-top:10px;font-size:.84rem;color:var(--gray-600);">
+            <code style="background:var(--gray-100);padding:2px 6px;border-radius:4px;">{{ produitQr?.reference }}</code>
+          </p>
+          <p style="font-size:.78rem;color:var(--gray-400);margin-top:6px;">
+            Scannez avec l'appareil photo ou l'onglet Scanner
+          </p>
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-outline" @click="modalQr = false">Fermer</button>
+          <button class="btn btn-primary" @click="imprimerQrProduit">Imprimer</button>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -188,7 +222,10 @@ export default {
     return {
       liste: [], categories: [], chargement: true, modal: false, erreur: '', recherche: '',
       confirm: { visible: false, cible: null },
-      form: { id: null, reference: '', codeBarre: '', nom: '', categorieId: null, description: '', prixAchat: null, prixVente: null, poids: null, volume: null, stockMinDefaut: 0 }
+      form: { id: null, reference: '', codeBarre: '', nom: '', categorieId: null, description: '', prixAchat: null, prixVente: null, poids: null, volume: null, stockMinDefaut: 0 },
+      // QR Code
+      modalQr: false,
+      produitQr: null
     }
   },
   computed: {

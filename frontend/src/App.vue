@@ -157,6 +157,17 @@
           <span>Traçabilité</span>
         </router-link>
 
+        <!-- QR Code : ADMIN, GESTIONNAIRE, MAGASINIER -->
+        <router-link v-if="auth.aUnRole('ADMIN','GESTIONNAIRE','MAGASINIER')" to="/qrcode" class="nav-item" @click="sidebarOuverte = false">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+            <rect x="3" y="3" width="7" height="7" rx="1" stroke="currentColor" stroke-width="1.8"/>
+            <rect x="14" y="3" width="7" height="7" rx="1" stroke="currentColor" stroke-width="1.8"/>
+            <rect x="3" y="14" width="7" height="7" rx="1" stroke="currentColor" stroke-width="1.8"/>
+            <path d="M14 14h2M14 18h2M18 14h2M18 18h2" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+          </svg>
+          <span>QR Code</span>
+        </router-link>
+
         <!-- Section Admin -->
         <template v-if="auth.aRole('ADMIN')">
           <p class="nav-section-label">Administration</p>
@@ -249,6 +260,8 @@ export default {
         '/reporting':                'Reporting & Exports',
         '/tracabilite':              'Traçabilité & Audit',
         '/commandes-fournisseurs':   'Commandes fournisseurs',
+        '/emplacements':             'Emplacements',
+        '/qrcode':                   'QR Code & Scanner',
         '/utilisateurs':             'Utilisateurs'
       }
       const path = this.$route.path
