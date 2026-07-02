@@ -78,10 +78,18 @@
               <td>
                 <span>{{ t.entrepotSourceNom }}</span>
                 <span v-if="t.zoneSourceNom" class="text-muted"> / {{ t.zoneSourceNom }}</span>
+                <div v-if="t.emplacementSourceCode" class="emp-mini">
+                  <svg width="10" height="10" viewBox="0 0 24 24" fill="none"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z" stroke="currentColor" stroke-width="2.5"/></svg>
+                  {{ t.emplacementSourceCode.split('/').pop() }}
+                </div>
               </td>
               <td>
                 <span>{{ t.entrepotDestinationNom }}</span>
                 <span v-if="t.zoneDestinationNom" class="text-muted"> / {{ t.zoneDestinationNom }}</span>
+                <div v-if="t.emplacementDestinationCode" class="emp-mini">
+                  <svg width="10" height="10" viewBox="0 0 24 24" fill="none"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z" stroke="currentColor" stroke-width="2.5"/></svg>
+                  {{ t.emplacementDestinationCode.split('/').pop() }}
+                </div>
               </td>
               <td><strong>{{ t.quantite }}</strong></td>
               <td><span class="badge" :class="badgeStatut(t.statut)">{{ labelStatut(t.statut) }}</span></td>
@@ -124,35 +132,61 @@
           <div class="form-row">
             <div class="form-group">
               <label class="form-label">Entrepôt source *</label>
-              <select class="form-select" v-model.number="form.entrepotSourceId" @change="form.zoneSourceId = null">
+              <select class="form-select" v-model.number="form.entrepotSourceId"
+                @change="form.zoneSourceId = null; form.emplacementSourceId = null">
                 <option value="">Sélectionner</option>
                 <option v-for="e in entrepots" :key="e.id" :value="e.id">{{ e.nom }}</option>
               </select>
             </div>
             <div class="form-group">
-              <label class="form-label">Zone source <span class="text-muted">(optionnel)</span></label>
-              <select class="form-select" v-model.number="form.zoneSourceId" :disabled="!form.entrepotSourceId">
+              <label class="form-label">Zone source</label>
+              <select class="form-select" v-model.number="form.zoneSourceId"
+                :disabled="!form.entrepotSourceId"
+                @change="form.emplacementSourceId = null">
                 <option :value="null">Aucune zone</option>
                 <option v-for="z in zonesSource" :key="z.id" :value="z.id">{{ z.nom }}</option>
               </select>
             </div>
           </div>
+          <!-- Emplacement source -->
+          <div class="form-group" v-if="emplacementsSource.length">
+            <label class="form-label">Emplacement source <span class="form-hint">(optionnel)</span></label>
+            <select class="form-select" v-model.number="form.emplacementSourceId">
+              <option :value="null">Aucun emplacement</option>
+              <option v-for="emp in emplacementsSource" :key="emp.id" :value="emp.id">
+                {{ emp.codeComplet }}
+              </option>
+            </select>
+          </div>
 
           <div class="form-row">
             <div class="form-group">
               <label class="form-label">Entrepôt destination *</label>
-              <select class="form-select" v-model.number="form.entrepotDestinationId" @change="form.zoneDestinationId = null">
+              <select class="form-select" v-model.number="form.entrepotDestinationId"
+                @change="form.zoneDestinationId = null; form.emplacementDestinationId = null">
                 <option value="">Sélectionner</option>
                 <option v-for="e in entrepots" :key="e.id" :value="e.id">{{ e.nom }}</option>
               </select>
             </div>
             <div class="form-group">
-              <label class="form-label">Zone destination <span class="text-muted">(optionnel)</span></label>
-              <select class="form-select" v-model.number="form.zoneDestinationId" :disabled="!form.entrepotDestinationId">
+              <label class="form-label">Zone destination</label>
+              <select class="form-select" v-model.number="form.zoneDestinationId"
+                :disabled="!form.entrepotDestinationId"
+                @change="form.emplacementDestinationId = null">
                 <option :value="null">Aucune zone</option>
                 <option v-for="z in zonesDestination" :key="z.id" :value="z.id">{{ z.nom }}</option>
               </select>
             </div>
+          </div>
+          <!-- Emplacement destination -->
+          <div class="form-group" v-if="emplacementsDestination.length">
+            <label class="form-label">Emplacement destination <span class="form-hint">(optionnel)</span></label>
+            <select class="form-select" v-model.number="form.emplacementDestinationId">
+              <option :value="null">Aucun emplacement</option>
+              <option v-for="emp in emplacementsDestination" :key="emp.id" :value="emp.id">
+                {{ emp.codeComplet }}
+              </option>
+            </select>
           </div>
 
           <div class="form-group">
@@ -228,7 +262,7 @@
 </template>
 
 <script>
-import { transfertApi, entrepotApi, zoneApi, produitApi } from '../services/api.js'
+import { transfertApi, entrepotApi, zoneApi, produitApi, emplacementApi } from '../services/api.js'
 
 export default {
   name: 'TransfertsPage',
@@ -237,6 +271,7 @@ export default {
       liste: [],
       entrepots: [],
       zones: [],
+      emplacements: [],
       produits: [],
       recherche: '',
       chargement: true,
@@ -247,8 +282,10 @@ export default {
         produitId: null,
         entrepotSourceId: null,
         zoneSourceId: null,
+        emplacementSourceId: null,
         entrepotDestinationId: null,
         zoneDestinationId: null,
+        emplacementDestinationId: null,
         quantite: 1,
         commentaire: ''
       },
@@ -280,6 +317,14 @@ export default {
     },
     zonesDestination() {
       return this.zones.filter(z => z.entrepotId === this.form.entrepotDestinationId)
+    },
+    emplacementsSource() {
+      if (!this.form.zoneSourceId) return []
+      return this.emplacements.filter(e => e.zoneId === this.form.zoneSourceId && e.actif)
+    },
+    emplacementsDestination() {
+      if (!this.form.zoneDestinationId) return []
+      return this.emplacements.filter(e => e.zoneId === this.form.zoneDestinationId && e.actif)
     }
   },
   async mounted() {
@@ -302,14 +347,16 @@ export default {
       }
     },
     async chargerDonnees() {
-      const [e, z, p] = await Promise.all([
+      const [e, z, p, emp] = await Promise.all([
         entrepotApi.findAll(),
         zoneApi.findAll(),
-        produitApi.findAll()
+        produitApi.findAll(),
+        emplacementApi.findAll()
       ])
-      this.entrepots = e.data
-      this.zones     = z.data
-      this.produits  = p.data
+      this.entrepots    = e.data
+      this.zones        = z.data
+      this.produits     = p.data
+      this.emplacements = emp.data
     },
 
     // --- Création ---
@@ -319,8 +366,10 @@ export default {
         produitId: null,
         entrepotSourceId: null,
         zoneSourceId: null,
+        emplacementSourceId: null,
         entrepotDestinationId: null,
         zoneDestinationId: null,
+        emplacementDestinationId: null,
         quantite: 1,
         commentaire: ''
       }
@@ -445,6 +494,13 @@ export default {
 
 <style scoped>
 .text-muted { color: var(--gray-400); font-size: .82rem; }
+.form-hint  { font-weight:400; color:var(--gray-400); font-size:.74rem; margin-left:4px; }
+.emp-mini {
+  display: inline-flex; align-items: center; gap: 3px;
+  font-size: .72rem; font-family: monospace; font-weight: 600;
+  color: var(--navy); background: var(--navy-xlight);
+  padding: 1px 6px; border-radius: 4px; margin-top: 3px;
+}
 .empty-state { text-align: center; padding: 40px; color: var(--gray-400); }
 
 /* Toast */

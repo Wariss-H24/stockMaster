@@ -12,6 +12,9 @@ public class StockDTO {
     private String entrepotNom;
     private Long zoneId;
     private String zoneNom;
+    private Long emplacementId;
+    private String emplacementCode;
+    private String emplacementCodeComplet;
     private Integer quantiteDisponible;
     private Integer quantiteReservee;
     private Integer quantiteTransit;

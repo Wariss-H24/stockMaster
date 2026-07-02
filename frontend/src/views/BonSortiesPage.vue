@@ -130,6 +130,14 @@
                   <label class="form-label">Quantité *</label>
                   <input class="form-input" type="number" min="1" v-model.number="ligne.quantite" />
                 </div>
+                <!-- Emplacement affiché depuis le stock (info magasinier) -->
+                <div v-if="ligne.emplacementCodeComplet" class="form-group" style="min-width:0;">
+                  <label class="form-label">Aller chercher à</label>
+                  <div class="emp-info-badge">
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z" stroke="currentColor" stroke-width="2"/></svg>
+                    {{ ligne.emplacementCodeComplet }}
+                  </div>
+                </div>
                 <button class="btn btn-danger btn-sm" style="height:36px;align-self:flex-end;" @click.prevent="supprimerLigne(index)">Supprimer</button>
               </div>
             </div>
@@ -164,7 +172,7 @@ export default {
     }
   },
   computed: {
-    peutEcrire()    { return authStore.aUnRole('ADMIN', 'GESTIONNAIRE') },
+    peutEcrire()    { return authStore.aUnRole('ADMIN', 'GESTIONNAIRE', 'MAGASINIER') },
     peutSupprimer() { return authStore.aUnRole('ADMIN', 'GESTIONNAIRE') },
     listeFiltree() {
       const q = this.recherche.toLowerCase()
@@ -205,7 +213,17 @@ export default {
     ouvrirModal(b = null) {
       this.erreur = ''
       if (b) {
-        this.form = { ...b, lignes: b.lignes.map(l => ({ ...l })) }
+        this.form = {
+          id:          b.id,
+          entrepotId:  b.entrepotId,
+          destination: b.destination,
+          commentaire: b.commentaire || '',
+          lignes: (b.lignes || []).map(l => ({
+            produitId:             l.produitId,
+            quantite:              l.quantite,
+            emplacementCodeComplet: l.emplacementCodeComplet || null  // lecture seule, affiché seulement
+          }))
+        }
       } else {
         this.form = { id: null, entrepotId: '', destination: '', commentaire: '', lignes: [] }
       }
@@ -226,8 +244,16 @@ export default {
         if (this.form.lignes.some(l => !l.produitId || l.quantite < 1)) {
           throw new Error('Chaque ligne doit contenir un produit et une quantité valide.')
         }
-        if (this.form.id) await sortieApi.modifier(this.form.id, this.form)
-        else await sortieApi.creer(this.form)
+        if (this.form.id) await sortieApi.modifier(this.form.id, {
+            entrepotId: this.form.entrepotId, destination: this.form.destination,
+            commentaire: this.form.commentaire || '',
+            lignes: this.form.lignes.map(l => ({ produitId: l.produitId, quantite: l.quantite }))
+          })
+        else await sortieApi.creer({
+            entrepotId: this.form.entrepotId, destination: this.form.destination,
+            commentaire: this.form.commentaire || '',
+            lignes: this.form.lignes.map(l => ({ produitId: l.produitId, quantite: l.quantite }))
+          })
         this.modal = false
         await this.charger()
       } catch (e) {
@@ -273,6 +299,12 @@ export default {
 .line-row { margin-bottom: 14px; padding-bottom: 14px; border-bottom: 1px solid var(--gray-200); }
 .line-row:last-child { margin-bottom: 0; border-bottom: none; }
 .align-end { align-items: flex-end; }
+.emp-info-badge {
+  display: flex; align-items: center; gap: 5px;
+  background: #f0fdf4; border: 1px solid #86efac;
+  color: #15803d; border-radius: 6px;
+  padding: 7px 10px; font-size: .78rem; font-family: monospace; font-weight: 600;
+}
 
   /* ── Toast erreur ── */
   .toast-error {

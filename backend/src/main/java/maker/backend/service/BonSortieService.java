@@ -12,6 +12,8 @@ import maker.backend.exception.ResourceNotFoundException;
 import maker.backend.repository.BonSortieRepository;
 import maker.backend.repository.EntrepotRepository;
 import maker.backend.repository.ProduitRepository;
+import maker.backend.repository.StockRepository;
+import maker.backend.service.EmplacementService;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -24,17 +26,20 @@ public class BonSortieService {
     private final BonSortieRepository repo;
     private final EntrepotRepository entrepotRepo;
     private final ProduitRepository produitRepo;
+    private final StockRepository stockRepo;
     private final StockService stockService;
     private final MouvementStockService mouvementService;
 
     public BonSortieService(BonSortieRepository repo,
                             EntrepotRepository entrepotRepo,
                             ProduitRepository produitRepo,
+                            StockRepository stockRepo,
                             StockService stockService,
                             MouvementStockService mouvementService) {
         this.repo = repo;
         this.entrepotRepo = entrepotRepo;
         this.produitRepo = produitRepo;
+        this.stockRepo = stockRepo;
         this.stockService = stockService;
         this.mouvementService = mouvementService;
     }
@@ -142,7 +147,16 @@ public class BonSortieService {
         SortieLigneDTO dto = new SortieLigneDTO();
         dto.setId(ligne.getId());
         dto.setProduitId(ligne.getProduit().getId());
+        dto.setProduitNom(ligne.getProduit().getNom());
+        dto.setProduitReference(ligne.getProduit().getReference());
         dto.setQuantite(ligne.getQuantite());
+        // Indiquer l'emplacement du stock pour guider le magasinier
+        stockRepo.findByProduitAndEntrepot(ligne.getProduit(), ligne.getBonSortie().getEntrepot())
+            .ifPresent(s -> {
+                if (s.getEmplacement() != null) {
+                    dto.setEmplacementCodeComplet(EmplacementService.buildCodeComplet(s.getEmplacement()));
+                }
+            });
         return dto;
     }
 

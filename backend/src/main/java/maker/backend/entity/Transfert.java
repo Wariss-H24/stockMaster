@@ -42,6 +42,11 @@ public class Transfert {
     @JoinColumn(name = "zone_source_id")
     private ZoneFr zoneSource;
 
+    /** Module 17 — Emplacement source précis */
+    @ManyToOne
+    @JoinColumn(name = "emplacement_source_id")
+    private Emplacement emplacementSource;
+
     @ManyToOne(optional = false)
     @JoinColumn(name = "entrepot_dest_id")
     private Entrepot entrepotDestination;
@@ -49,6 +54,11 @@ public class Transfert {
     @ManyToOne
     @JoinColumn(name = "zone_dest_id")
     private ZoneFr zoneDestination;
+
+    /** Module 17 — Emplacement destination */
+    @ManyToOne
+    @JoinColumn(name = "emplacement_dest_id")
+    private Emplacement emplacementDestination;
 
     @Min(1)
     private Integer quantite;

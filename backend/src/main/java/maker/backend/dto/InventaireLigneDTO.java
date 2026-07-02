@@ -8,6 +8,8 @@ public class InventaireLigneDTO {
     private Long produitId;
     private String produitNom;
     private String produitReference;
+    /** Code complet de l'emplacement où se trouve le produit */
+    private String emplacementCodeComplet;
     private Integer quantiteSysteme;
     private Integer quantitePhysique;
     private Integer ecart;

@@ -150,6 +150,7 @@
                 <tr>
                   <th>Produit</th>
                   <th>Référence</th>
+                  <th>Emplacement</th>
                   <th>Stock système</th>
                   <th>Stock physique</th>
                   <th>Écart</th>
@@ -158,11 +159,17 @@
               </thead>
               <tbody>
                 <tr v-if="!lignesSaisie.length">
-                  <td colspan="6" class="empty-state">Aucune ligne d'inventaire.</td>
+                  <td colspan="7" class="empty-state">Aucune ligne d'inventaire.</td>
                 </tr>
                 <tr v-for="(ligne, idx) in lignesSaisie" :key="idx">
                   <td>{{ ligne.produitNom }}</td>
                   <td><code class="ref-code">{{ ligne.produitReference }}</code></td>
+                  <td>
+                    <span v-if="ligne.emplacementCodeComplet" class="emp-code-inv" :title="ligne.emplacementCodeComplet">
+                      {{ ligne.emplacementCodeComplet.split('/').pop() }}
+                    </span>
+                    <span v-else style="color:var(--gray-300);font-size:.78rem;">—</span>
+                  </td>
                   <td style="text-align:right;font-weight:600;">{{ ligne.quantiteSysteme }}</td>
                   <td style="text-align:right;">
                     <input type="number" min="0" class="form-input" style="width:90px;text-align:right;"
@@ -404,6 +411,11 @@ export default {
 .text-muted { color: var(--gray-400); font-size: .82rem; }
 .empty-state { text-align: center; padding: 48px 20px; color: var(--gray-400); font-size: .9rem; }
 .ref-code { font-size: .82rem; background: var(--gray-100); padding: 2px 6px; border-radius: 4px; font-family: monospace; }
+.emp-code-inv {
+  font-size: .76rem; font-family: monospace; font-weight: 600;
+  background: var(--navy-xlight); color: var(--navy);
+  padding: 2px 6px; border-radius: 4px;
+}
 .ecart-pos { color: var(--success); }
 .ecart-neg { color: var(--danger); }
 .ecart-zero { color: var(--gray-400); }

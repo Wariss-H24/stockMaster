@@ -30,6 +30,7 @@ public class TransfertService {
     private final ZoneFrRepository zoneRepo;
     private final ProduitRepository produitRepo;
     private final UtilisateurRepository userRepo;
+    private final EmplacementRepository emplacementRepo;
     private final StockService stockService;
     private final MouvementStockService mouvementService;
     private final TransfertMapper mapper;
@@ -39,17 +40,19 @@ public class TransfertService {
                             ZoneFrRepository zoneRepo,
                             ProduitRepository produitRepo,
                             UtilisateurRepository userRepo,
+                            EmplacementRepository emplacementRepo,
                             StockService stockService,
                             MouvementStockService mouvementService,
                             TransfertMapper mapper) {
-        this.transfertRepo  = transfertRepo;
-        this.entrepotRepo   = entrepotRepo;
-        this.zoneRepo       = zoneRepo;
-        this.produitRepo    = produitRepo;
-        this.userRepo       = userRepo;
-        this.stockService   = stockService;
+        this.transfertRepo    = transfertRepo;
+        this.entrepotRepo     = entrepotRepo;
+        this.zoneRepo         = zoneRepo;
+        this.produitRepo      = produitRepo;
+        this.userRepo         = userRepo;
+        this.emplacementRepo  = emplacementRepo;
+        this.stockService     = stockService;
         this.mouvementService = mouvementService;
-        this.mapper         = mapper;
+        this.mapper           = mapper;
     }
 
     // --- Lecture ---
@@ -70,13 +73,24 @@ public class TransfertService {
     public TransfertDTO creer(TransfertDTO dto, String usernameCreateur) {
         Entrepot source = findEntrepot(dto.getEntrepotSourceId());
         Entrepot dest   = findEntrepot(dto.getEntrepotDestinationId());
-        ZoneFr zSource  = dto.getZoneSourceId() != null ? findZone(dto.getZoneSourceId(), source) : null;
-        ZoneFr zDest    = dto.getZoneDestinationId() != null ? findZone(dto.getZoneDestinationId(), dest) : null;
+        ZoneFr zSource  = dto.getZoneSourceId()      != null ? findZone(dto.getZoneSourceId(), source) : null;
+        ZoneFr zDest    = dto.getZoneDestinationId()  != null ? findZone(dto.getZoneDestinationId(), dest) : null;
         Produit produit = findProduit(dto.getProduitId());
 
-        // Empêcher un transfert vers la même zone dans le même entrepôt
+        // Emplacements (optionnels)
+        Emplacement empSource = dto.getEmplacementSourceId() != null
+                ? emplacementRepo.findById(dto.getEmplacementSourceId())
+                    .orElseThrow(() -> new ResourceNotFoundException("Emplacement source introuvable"))
+                : null;
+        Emplacement empDest = dto.getEmplacementDestinationId() != null
+                ? emplacementRepo.findById(dto.getEmplacementDestinationId())
+                    .orElseThrow(() -> new ResourceNotFoundException("Emplacement destination introuvable"))
+                : null;
+
+        // Empêcher un transfert identique
         if (source.getId().equals(dest.getId()) &&
-            java.util.Objects.equals(dto.getZoneSourceId(), dto.getZoneDestinationId())) {
+            java.util.Objects.equals(dto.getZoneSourceId(), dto.getZoneDestinationId()) &&
+            java.util.Objects.equals(dto.getEmplacementSourceId(), dto.getEmplacementDestinationId())) {
             throw new IllegalArgumentException("Source et destination doivent être différentes");
         }
 
@@ -87,8 +101,10 @@ public class TransfertService {
         t.setProduit(produit);
         t.setEntrepotSource(source);
         t.setZoneSource(zSource);
+        t.setEmplacementSource(empSource);
         t.setEntrepotDestination(dest);
         t.setZoneDestination(zDest);
+        t.setEmplacementDestination(empDest);
         t.setQuantite(dto.getQuantite());
         t.setCommentaire(dto.getCommentaire());
         t.setStatut(Transfert.Statut.BROUILLON);
@@ -105,11 +121,15 @@ public class TransfertService {
             throw new IllegalArgumentException("Seul un transfert en BROUILLON peut être expédié");
         }
 
-        // Vérifier et débiter le stock source
-        Stock stockSource = stockService.findOrCreateStock(
+        Long empSourceId = t.getEmplacementSource() != null ? t.getEmplacementSource().getId() : null;
+        Long empDestId   = t.getEmplacementDestination() != null ? t.getEmplacementDestination().getId() : null;
+
+        // Vérifier et débiter le stock source (avec emplacement si précisé)
+        Stock stockSource = stockService.findOrCreateStockAvecEmplacement(
             t.getProduit().getId(),
             t.getEntrepotSource().getId(),
-            t.getZoneSource() != null ? t.getZoneSource().getId() : null
+            t.getZoneSource() != null ? t.getZoneSource().getId() : null,
+            empSourceId
         );
         if (stockSource.getQuantiteDisponible() < t.getQuantite()) {
             throw new IllegalArgumentException(
@@ -118,24 +138,22 @@ public class TransfertService {
             );
         }
 
-        // Débiter la source
         stockSource.setQuantiteDisponible(stockSource.getQuantiteDisponible() - t.getQuantite());
         stockService.save(stockSource);
 
         // Mettre en transit à la destination
-        Stock stockDest = stockService.findOrCreateStock(
+        Stock stockDest = stockService.findOrCreateStockAvecEmplacement(
             t.getProduit().getId(),
             t.getEntrepotDestination().getId(),
-            t.getZoneDestination() != null ? t.getZoneDestination().getId() : null
+            t.getZoneDestination() != null ? t.getZoneDestination().getId() : null,
+            empDestId
         );
         stockDest.setQuantiteTransit(stockDest.getQuantiteTransit() + t.getQuantite());
         stockService.save(stockDest);
 
-        // Mouvement TRANSFERT côté source
         enregistrerMouvement(stockSource, MouvementStock.Type.TRANSFERT, t.getQuantite(),
             "Expédié vers " + t.getEntrepotDestination().getNom(), t.getCommentaire());
 
-        // Recalculer capacités
         stockService.recalculerCapaciteZone(t.getZoneSource());
         stockService.recalculerCapaciteEntrepot(t.getEntrepotSource());
 
@@ -152,22 +170,22 @@ public class TransfertService {
             throw new IllegalArgumentException("Seul un transfert EXPÉDIÉ peut être reçu");
         }
 
-        Stock stockDest = stockService.findOrCreateStock(
+        Long empDestId = t.getEmplacementDestination() != null ? t.getEmplacementDestination().getId() : null;
+
+        Stock stockDest = stockService.findOrCreateStockAvecEmplacement(
             t.getProduit().getId(),
             t.getEntrepotDestination().getId(),
-            t.getZoneDestination() != null ? t.getZoneDestination().getId() : null
+            t.getZoneDestination() != null ? t.getZoneDestination().getId() : null,
+            empDestId
         );
 
-        // Sortir du transit et créditer disponible
         stockDest.setQuantiteTransit(Math.max(0, stockDest.getQuantiteTransit() - t.getQuantite()));
         stockDest.setQuantiteDisponible(stockDest.getQuantiteDisponible() + t.getQuantite());
         stockService.save(stockDest);
 
-        // Mouvement ENTREE côté destination
         enregistrerMouvement(stockDest, MouvementStock.Type.ENTREE, t.getQuantite(),
             "Reçu depuis " + t.getEntrepotSource().getNom(), t.getCommentaire());
 
-        // Recalculer capacités destination
         stockService.recalculerCapaciteZone(t.getZoneDestination());
         stockService.recalculerCapaciteEntrepot(t.getEntrepotDestination());
 

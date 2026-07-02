@@ -27,12 +27,20 @@ public class TransfertDTO {
     private Long zoneSourceId;
     private String zoneSourceNom;
 
+    // Module 17 — Emplacement source
+    private Long emplacementSourceId;
+    private String emplacementSourceCode;
+
     @NotNull(message = "L'entrepôt de destination est requis")
     private Long entrepotDestinationId;
     private String entrepotDestinationNom;
 
     private Long zoneDestinationId;
     private String zoneDestinationNom;
+
+    // Module 17 — Emplacement destination
+    private Long emplacementDestinationId;
+    private String emplacementDestinationCode;
 
     @NotNull(message = "La quantité est requise")
     @Min(value = 1, message = "La quantité doit être au moins 1")

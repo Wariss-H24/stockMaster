@@ -5,6 +5,7 @@ import maker.backend.dto.InventaireLigneDTO;
 import maker.backend.entity.*;
 import maker.backend.exception.ResourceNotFoundException;
 import maker.backend.repository.*;
+import maker.backend.service.EmplacementService;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -213,6 +214,13 @@ public class InventaireService {
         dto.setQuantitePhysique(l.getQuantitePhysique());
         dto.setEcart(l.getEcart());
         dto.setCommentaire(l.getCommentaire());
+        // Enrichir avec l'emplacement du stock si disponible
+        stockRepo.findByProduitAndEntrepot(l.getProduit(), l.getInventaire().getEntrepot())
+            .ifPresent(s -> {
+                if (s.getEmplacement() != null) {
+                    dto.setEmplacementCodeComplet(EmplacementService.buildCodeComplet(s.getEmplacement()));
+                }
+            });
         return dto;
     }
 }

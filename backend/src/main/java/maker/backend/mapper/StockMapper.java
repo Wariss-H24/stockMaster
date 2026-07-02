@@ -19,6 +19,11 @@ public class StockMapper {
             dto.setZoneId(stock.getZone().getId());
             dto.setZoneNom(stock.getZone().getNom());
         }
+        if (stock.getEmplacement() != null) {
+            dto.setEmplacementId(stock.getEmplacement().getId());
+            dto.setEmplacementCode(stock.getEmplacement().getCode());
+            dto.setEmplacementCodeComplet(maker.backend.service.EmplacementService.buildCodeComplet(stock.getEmplacement()));
+        }
         dto.setQuantiteDisponible(stock.getQuantiteDisponible());
         dto.setQuantiteReservee(stock.getQuantiteReservee());
         dto.setQuantiteTransit(stock.getQuantiteTransit());

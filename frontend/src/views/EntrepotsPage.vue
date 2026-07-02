@@ -14,8 +14,8 @@
           </svg>
           <input v-model="recherche" placeholder="Rechercher un entrepôt..." />
         </div>
-        <!-- Bouton visible uniquement pour ADMIN et GESTIONNAIRE -->
-        <button v-if="peutEcrire" class="btn btn-primary" @click="ouvrirModal()">
+        <!-- Bouton création réservé à l'ADMIN uniquement -->
+        <button v-if="peutCreer" class="btn btn-primary" @click="ouvrirModal()">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
             <path d="M12 5v14M5 12h14" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/>
           </svg>
@@ -158,8 +158,9 @@ export default {
     }
   },
   computed: {
-    // ADMIN + GESTIONNAIRE peuvent créer/modifier
+    // ADMIN peut tout, GESTIONNAIRE peut modifier seulement (pas créer)
     peutEcrire()    { return authStore.aUnRole('ADMIN', 'GESTIONNAIRE') },
+    peutCreer()     { return authStore.aRole('ADMIN') },
     // Seul ADMIN peut désactiver
     peutSupprimer() { return authStore.aRole('ADMIN') },
     listeFiltree() {

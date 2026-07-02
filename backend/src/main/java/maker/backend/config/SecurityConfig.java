@@ -16,15 +16,12 @@ import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 
 /**
- * Configuration Spring Security avec JWT stateless et restrictions par rôle.
+ * Permissions par rôle :
  *
- * Permissions :
- *  - /api/auth/**          → public (login, register)
- *  - /h2-console/**        → public (dev)
- *  - GET  /api/**          → ADMIN, GESTIONNAIRE, MAGASINIER, AUDITEUR
- *  - POST/PUT /api/**      → ADMIN, GESTIONNAIRE
- *  - DELETE /api/**        → ADMIN uniquement
- *  - /api/utilisateurs/**  → ADMIN uniquement
+ * ADMIN          → tout
+ * GESTIONNAIRE   → tout sauf : créer entrepôt, gérer utilisateurs/rôles
+ * MAGASINIER     → lecture + bons entrée/sortie + transferts. PAS : créer entrepôt/zone/rayon/étagère/emplacement/produit
+ * AUDITEUR       → lecture seule
  */
 @Configuration
 @EnableMethodSecurity(prePostEnabled = true)
@@ -38,13 +35,9 @@ public class SecurityConfig {
         this.jwtFilter = jwtFilter;
     }
 
-    /** Encodeur BCrypt pour les mots de passe */
     @Bean
-    public PasswordEncoder passwordEncoder() {
-        return new BCryptPasswordEncoder();
-    }
+    public PasswordEncoder passwordEncoder() { return new BCryptPasswordEncoder(); }
 
-    /** Provider d'authentification : UserDetailsService + BCrypt */
     @Bean
     public DaoAuthenticationProvider authProvider() {
         DaoAuthenticationProvider p = new DaoAuthenticationProvider();
@@ -53,7 +46,6 @@ public class SecurityConfig {
         return p;
     }
 
-    /** AuthenticationManager exposé pour AuthService */
     @Bean
     public AuthenticationManager authenticationManager(AuthenticationConfiguration config) throws Exception {
         return config.getAuthenticationManager();
@@ -62,25 +54,76 @@ public class SecurityConfig {
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
         http
-            .cors(cors -> {})
-            .csrf(csrf -> csrf.disable())
-            // API stateless : pas de session HTTP
+            .cors(c -> {})
+            .csrf(c -> c.disable())
             .sessionManagement(s -> s.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
-            .headers(h -> h.frameOptions(f -> f.sameOrigin())) // H2 console
+            .headers(h -> h.frameOptions(f -> f.sameOrigin()))
             .authorizeHttpRequests(auth -> auth
 
-                // --- Routes publiques ---
+                // ── Publiques ──────────────────────────────────────────────
                 .requestMatchers("/api/auth/**").permitAll()
                 .requestMatchers("/h2-console/**").permitAll()
 
-                // --- Gestion des utilisateurs : ADMIN seulement ---
+                // ── Utilisateurs & rôles : ADMIN seulement ─────────────────
                 .requestMatchers("/api/utilisateurs/**").hasRole("ADMIN")
 
-                // --- Lecture : tous les rôles connectés (ou authentifiés pour stocks/mouvements) ---
-                .requestMatchers(HttpMethod.GET, "/api/stocks/**").authenticated()
-                .requestMatchers(HttpMethod.GET, "/api/mouvements-stock/**").authenticated()
+                // ── Entrepôts : lecture tous, création/modif ADMIN+GESTIONNAIRE, suppression ADMIN ──
+                .requestMatchers(HttpMethod.GET,    "/api/entrepots/**").hasAnyRole("ADMIN","GESTIONNAIRE","MAGASINIER","AUDITEUR")
+                .requestMatchers(HttpMethod.POST,   "/api/entrepots").hasRole("ADMIN")
+                .requestMatchers(HttpMethod.PUT,    "/api/entrepots/**").hasRole("ADMIN")
+                .requestMatchers(HttpMethod.DELETE, "/api/entrepots/**").hasRole("ADMIN")
+
+                // ── Zones : lecture tous, CRUD ADMIN+GESTIONNAIRE ──────────
+                .requestMatchers(HttpMethod.GET,    "/api/zones/**").hasAnyRole("ADMIN","GESTIONNAIRE","MAGASINIER","AUDITEUR")
+                .requestMatchers(HttpMethod.POST,   "/api/zones").hasAnyRole("ADMIN","GESTIONNAIRE")
+                .requestMatchers(HttpMethod.PUT,    "/api/zones/**").hasAnyRole("ADMIN","GESTIONNAIRE")
+                .requestMatchers(HttpMethod.DELETE, "/api/zones/**").hasAnyRole("ADMIN","GESTIONNAIRE")
+
+                // ── Rayons / Étagères / Emplacements : lecture tous, CRUD ADMIN+GESTIONNAIRE ──
+                .requestMatchers(HttpMethod.GET,    "/api/rayons/**").hasAnyRole("ADMIN","GESTIONNAIRE","MAGASINIER","AUDITEUR")
+                .requestMatchers(HttpMethod.GET,    "/api/etageres/**").hasAnyRole("ADMIN","GESTIONNAIRE","MAGASINIER","AUDITEUR")
+                .requestMatchers(HttpMethod.GET,    "/api/emplacements/**").hasAnyRole("ADMIN","GESTIONNAIRE","MAGASINIER","AUDITEUR")
+                .requestMatchers(HttpMethod.POST,   "/api/rayons","/api/etageres","/api/emplacements").hasAnyRole("ADMIN","GESTIONNAIRE")
+                .requestMatchers(HttpMethod.PUT,    "/api/rayons/**","/api/etageres/**","/api/emplacements/**").hasAnyRole("ADMIN","GESTIONNAIRE")
+                .requestMatchers(HttpMethod.DELETE, "/api/rayons/**","/api/etageres/**","/api/emplacements/**").hasAnyRole("ADMIN","GESTIONNAIRE")
+
+                // ── Produits : lecture tous, CRUD ADMIN+GESTIONNAIRE ────────
+                .requestMatchers(HttpMethod.GET,    "/api/produits/**").hasAnyRole("ADMIN","GESTIONNAIRE","MAGASINIER","AUDITEUR")
+                .requestMatchers(HttpMethod.POST,   "/api/produits").hasAnyRole("ADMIN","GESTIONNAIRE")
+                .requestMatchers(HttpMethod.PUT,    "/api/produits/**").hasAnyRole("ADMIN","GESTIONNAIRE")
+                .requestMatchers(HttpMethod.DELETE, "/api/produits/**").hasRole("ADMIN")
+
+                // ── Stocks & mouvements : lecture tous ──────────────────────
+                .requestMatchers(HttpMethod.GET, "/api/stocks/**").hasAnyRole("ADMIN","GESTIONNAIRE","MAGASINIER","AUDITEUR")
+                .requestMatchers(HttpMethod.PATCH, "/api/stocks/**").hasAnyRole("ADMIN","GESTIONNAIRE")
+                .requestMatchers(HttpMethod.GET, "/api/mouvements-stock/**").hasAnyRole("ADMIN","GESTIONNAIRE","MAGASINIER","AUDITEUR")
+
+                // ── Dashboard & alertes : tous les connectés ─────────────────
                 .requestMatchers(HttpMethod.GET, "/api/dashboard/**").authenticated()
                 .requestMatchers(HttpMethod.GET, "/api/alertes/**").authenticated()
+                .requestMatchers(HttpMethod.POST, "/api/alertes/**").hasAnyRole("ADMIN","GESTIONNAIRE")
+
+                // ── Audit : ADMIN + AUDITEUR ─────────────────────────────────
+                .requestMatchers(HttpMethod.GET, "/api/audit/**").hasAnyRole("ADMIN","AUDITEUR")
+
+                // ── Reporting : ADMIN + GESTIONNAIRE + AUDITEUR ─────────────
+                .requestMatchers(HttpMethod.GET, "/api/reporting/**").hasAnyRole("ADMIN","GESTIONNAIRE","AUDITEUR")
+
+                // ── Bons réception / sortie : ADMIN + GESTIONNAIRE + MAGASINIER ─
+                .requestMatchers(HttpMethod.GET,    "/api/bon-receptions/**").hasAnyRole("ADMIN","GESTIONNAIRE","MAGASINIER","AUDITEUR")
+                .requestMatchers(HttpMethod.POST,   "/api/bon-receptions/**").hasAnyRole("ADMIN","GESTIONNAIRE","MAGASINIER")
+                .requestMatchers(HttpMethod.PUT,    "/api/bon-receptions/**").hasAnyRole("ADMIN","GESTIONNAIRE","MAGASINIER")
+                .requestMatchers(HttpMethod.DELETE, "/api/bon-receptions/**").hasAnyRole("ADMIN","GESTIONNAIRE")
+
+                .requestMatchers(HttpMethod.GET,    "/api/bon-sorties/**").hasAnyRole("ADMIN","GESTIONNAIRE","MAGASINIER","AUDITEUR")
+                .requestMatchers(HttpMethod.POST,   "/api/bon-sorties/**").hasAnyRole("ADMIN","GESTIONNAIRE","MAGASINIER")
+                .requestMatchers(HttpMethod.PUT,    "/api/bon-sorties/**").hasAnyRole("ADMIN","GESTIONNAIRE","MAGASINIER")
+                .requestMatchers(HttpMethod.DELETE, "/api/bon-sorties/**").hasAnyRole("ADMIN","GESTIONNAIRE")
+
+                // ── Transferts : ADMIN + GESTIONNAIRE + MAGASINIER ───────────
+                .requestMatchers(HttpMethod.GET,   "/api/transferts/**").hasAnyRole("ADMIN","GESTIONNAIRE","MAGASINIER","AUDITEUR")
+                .requestMatchers(HttpMethod.POST,  "/api/transferts/**").hasAnyRole("ADMIN","GESTIONNAIRE","MAGASINIER")
+                .requestMatchers(HttpMethod.PATCH, "/api/transferts/**").hasAnyRole("ADMIN","GESTIONNAIRE","MAGASINIER")
                 // QR Code : accessible à tout utilisateur authentifié (tous rôles)
                 .requestMatchers(HttpMethod.GET, "/api/qr/**").authenticated()
                 .requestMatchers(HttpMethod.GET, "/api/audit/**").hasAnyRole("ADMIN", "AUDITEUR")
@@ -92,17 +135,29 @@ public class SecurityConfig {
                 .requestMatchers(HttpMethod.PUT, "/api/**").hasAnyRole("ADMIN", "GESTIONNAIRE")
                 .requestMatchers(HttpMethod.PATCH, "/api/**").hasAnyRole("ADMIN", "GESTIONNAIRE")
 
-                // --- Suppression / désactivation : ADMIN seulement, sauf bons en brouillon pour GESTIONNAIRE
-                .requestMatchers(HttpMethod.DELETE, "/api/bon-receptions/**").hasAnyRole("ADMIN", "GESTIONNAIRE")
-                .requestMatchers(HttpMethod.DELETE, "/api/bon-sorties/**").hasAnyRole("ADMIN", "GESTIONNAIRE")
-                .requestMatchers(HttpMethod.DELETE, "/api/commandes-fournisseurs/**").hasAnyRole("ADMIN", "GESTIONNAIRE")
-                .requestMatchers(HttpMethod.DELETE, "/api/**").hasRole("ADMIN")
+                // ── Inventaires : ADMIN + GESTIONNAIRE ────────────────────────
+                .requestMatchers(HttpMethod.GET,   "/api/inventaires/**").hasAnyRole("ADMIN","GESTIONNAIRE","AUDITEUR")
+                .requestMatchers(HttpMethod.POST,  "/api/inventaires/**").hasAnyRole("ADMIN","GESTIONNAIRE")
+                .requestMatchers(HttpMethod.PATCH, "/api/inventaires/**").hasAnyRole("ADMIN","GESTIONNAIRE")
+
+                // ── Commandes fournisseurs : ADMIN + GESTIONNAIRE ─────────────
+                .requestMatchers("/api/commandes-fournisseurs/**").hasAnyRole("ADMIN","GESTIONNAIRE")
+
+                // ── Catégories, fournisseurs : ADMIN + GESTIONNAIRE ───────────
+                .requestMatchers(HttpMethod.GET,    "/api/categories/**").hasAnyRole("ADMIN","GESTIONNAIRE","MAGASINIER","AUDITEUR")
+                .requestMatchers(HttpMethod.POST,   "/api/categories/**").hasAnyRole("ADMIN","GESTIONNAIRE")
+                .requestMatchers(HttpMethod.PUT,    "/api/categories/**").hasAnyRole("ADMIN","GESTIONNAIRE")
+                .requestMatchers(HttpMethod.DELETE, "/api/categories/**").hasAnyRole("ADMIN","GESTIONNAIRE")
+
+                .requestMatchers(HttpMethod.GET,    "/api/fournisseurs/**").hasAnyRole("ADMIN","GESTIONNAIRE","MAGASINIER","AUDITEUR")
+                .requestMatchers(HttpMethod.POST,   "/api/fournisseurs/**").hasAnyRole("ADMIN","GESTIONNAIRE")
+                .requestMatchers(HttpMethod.PUT,    "/api/fournisseurs/**").hasAnyRole("ADMIN","GESTIONNAIRE")
+                .requestMatchers(HttpMethod.DELETE, "/api/fournisseurs/**").hasAnyRole("ADMIN","GESTIONNAIRE")
 
                 // Tout le reste : authentifié
                 .anyRequest().authenticated()
             )
             .authenticationProvider(authProvider())
-            // Injecter le filtre JWT avant le filtre d'auth par défaut
             .addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class);
 
         return http.build();
