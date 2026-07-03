@@ -1,7 +1,13 @@
 import axios from 'axios'
 import { authStore } from './authStore'
 
-const api = axios.create({ baseURL: '/api' })
+// En dev : baseURL = '/api' (proxy Vite vers localhost:8080)
+// En prod : baseURL = 'https://stockmaster-backend.onrender.com/api'
+const baseURL = import.meta.env.VITE_API_URL
+  ? `${import.meta.env.VITE_API_URL}/api`
+  : '/api'
+
+const api = axios.create({ baseURL })
 
 api.interceptors.request.use(config => {
   if (authStore.token) config.headers.Authorization = `Bearer ${authStore.token}`

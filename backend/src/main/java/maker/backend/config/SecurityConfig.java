@@ -1,6 +1,7 @@
 package maker.backend.config;
 
 import maker.backend.service.UserDetailsServiceImpl;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
@@ -14,15 +15,13 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+import org.springframework.web.cors.CorsConfiguration;
+import org.springframework.web.cors.CorsConfigurationSource;
+import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
-/**
- * Permissions par rôle :
- *
- * ADMIN          → tout
- * GESTIONNAIRE   → tout sauf : créer entrepôt, gérer utilisateurs/rôles
- * MAGASINIER     → lecture + bons entrée/sortie + transferts. PAS : créer entrepôt/zone/rayon/étagère/emplacement/produit
- * AUDITEUR       → lecture seule
- */
+import java.util.Arrays;
+import java.util.List;
+
 @Configuration
 @EnableMethodSecurity(prePostEnabled = true)
 public class SecurityConfig {
@@ -30,9 +29,30 @@ public class SecurityConfig {
     private final UserDetailsServiceImpl userDetailsService;
     private final JwtFilter jwtFilter;
 
+    @Value("${stockmaster.cors.allowed-origins:http://localhost:3000}")
+    private String allowedOrigins;
+
     public SecurityConfig(UserDetailsServiceImpl userDetailsService, JwtFilter jwtFilter) {
         this.userDetailsService = userDetailsService;
         this.jwtFilter = jwtFilter;
+    }
+
+    @Bean
+    public CorsConfigurationSource corsConfigurationSource() {
+        CorsConfiguration config = new CorsConfiguration();
+        // Accepter localhost dev + URL Vercel prod
+        List<String> origins = Arrays.asList(allowedOrigins.split(","));
+        origins = new java.util.ArrayList<>(origins);
+        origins.add("http://localhost:3000");
+        origins.add("http://localhost:5173");
+        config.setAllowedOriginPatterns(origins);
+        config.setAllowedMethods(Arrays.asList("GET","POST","PUT","PATCH","DELETE","OPTIONS"));
+        config.setAllowedHeaders(List.of("*"));
+        config.setAllowCredentials(true);
+        UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
+        source.registerCorsConfiguration("/**", config);
+        return source;
+    }
     }
 
     @Bean
@@ -54,7 +74,7 @@ public class SecurityConfig {
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
         http
-            .cors(c -> {})
+            .cors(cors -> cors.configurationSource(corsConfigurationSource()))
             .csrf(c -> c.disable())
             .sessionManagement(s -> s.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
             .headers(h -> h.frameOptions(f -> f.sameOrigin()))
