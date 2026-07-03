@@ -188,15 +188,16 @@ export const emplacementApi = {
 
 // ── Module 18 — QR Code ───────────────────────────────────────────────────────
 export const qrApi = {
-  // URLs directes pour les balises <img> (retournent une image PNG)
+  // URLs directes pour les balises <img src="..."> — utilisées comme src d'image
+  // Note: baseURL de axios est /api, donc on part de /api/qr/...
   urlProduit:      (id) => `/api/qr/produit/${id}`,
   urlEmplacement:  (id) => `/api/qr/emplacement/${id}`,
   urlStock:        (id) => `/api/qr/stock/${id}`,
 
-  // Téléchargement PNG
-  getProduitPng:     (id) => api.get(`/api/qr/produit/${id}`,     { responseType: 'blob' }),
-  getEmplacementPng: (id) => api.get(`/api/qr/emplacement/${id}`, { responseType: 'blob' }),
+  // Téléchargement PNG (axios avec baseURL=/api donc chemin relatif)
+  getProduitPng:     (id) => api.get(`/qr/produit/${id}`,     { responseType: 'blob' }),
+  getEmplacementPng: (id) => api.get(`/qr/emplacement/${id}`, { responseType: 'blob' }),
 
   // Résolution après scan — retourne les données complètes
-  resoudre: (type, id) => api.get('/api/qr/resolve', { params: { type, id } })
+  resoudre: (type, id) => api.get('/qr/resolve', { params: { type, id } })
 }

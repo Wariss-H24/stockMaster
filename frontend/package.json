@@ -9,9 +9,10 @@
   },
   "dependencies": {
     "axios": "^1.6.0",
-    "qrcode.vue": "^3.10.0",
     "vue": "^3.4.0",
-    "vue-router": "^4.3.0"
+    "vue-router": "^4.3.0",
+    "@zxing/browser": "^0.1.5",
+    "@zxing/library": "^0.21.3"
   },
   "devDependencies": {
     "@vitejs/plugin-vue": "^5.0.0",

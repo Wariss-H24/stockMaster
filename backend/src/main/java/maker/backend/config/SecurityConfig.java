@@ -126,14 +126,6 @@ public class SecurityConfig {
                 .requestMatchers(HttpMethod.PATCH, "/api/transferts/**").hasAnyRole("ADMIN","GESTIONNAIRE","MAGASINIER")
                 // QR Code : accessible à tout utilisateur authentifié (tous rôles)
                 .requestMatchers(HttpMethod.GET, "/api/qr/**").authenticated()
-                .requestMatchers(HttpMethod.GET, "/api/audit/**").hasAnyRole("ADMIN", "AUDITEUR")
-                .requestMatchers(HttpMethod.GET, "/api/reporting/**").hasAnyRole("ADMIN", "GESTIONNAIRE", "AUDITEUR")
-                .requestMatchers(HttpMethod.GET, "/api/**").hasAnyRole("ADMIN", "GESTIONNAIRE", "MAGASINIER", "AUDITEUR")
-
-                // --- Création et modification : ADMIN + GESTIONNAIRE ---
-                .requestMatchers(HttpMethod.POST, "/api/**").hasAnyRole("ADMIN", "GESTIONNAIRE")
-                .requestMatchers(HttpMethod.PUT, "/api/**").hasAnyRole("ADMIN", "GESTIONNAIRE")
-                .requestMatchers(HttpMethod.PATCH, "/api/**").hasAnyRole("ADMIN", "GESTIONNAIRE")
 
                 // ── Inventaires : ADMIN + GESTIONNAIRE ────────────────────────
                 .requestMatchers(HttpMethod.GET,   "/api/inventaires/**").hasAnyRole("ADMIN","GESTIONNAIRE","AUDITEUR")
@@ -153,6 +145,12 @@ public class SecurityConfig {
                 .requestMatchers(HttpMethod.POST,   "/api/fournisseurs/**").hasAnyRole("ADMIN","GESTIONNAIRE")
                 .requestMatchers(HttpMethod.PUT,    "/api/fournisseurs/**").hasAnyRole("ADMIN","GESTIONNAIRE")
                 .requestMatchers(HttpMethod.DELETE, "/api/fournisseurs/**").hasAnyRole("ADMIN","GESTIONNAIRE")
+
+                // --- Fallback générique : doit être en dernier avant anyRequest ---
+                .requestMatchers(HttpMethod.GET, "/api/**").hasAnyRole("ADMIN", "GESTIONNAIRE", "MAGASINIER", "AUDITEUR")
+                .requestMatchers(HttpMethod.POST, "/api/**").hasAnyRole("ADMIN", "GESTIONNAIRE")
+                .requestMatchers(HttpMethod.PUT, "/api/**").hasAnyRole("ADMIN", "GESTIONNAIRE")
+                .requestMatchers(HttpMethod.PATCH, "/api/**").hasAnyRole("ADMIN", "GESTIONNAIRE")
 
                 // Tout le reste : authentifié
                 .anyRequest().authenticated()

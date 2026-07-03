@@ -278,6 +278,35 @@ export default {
       await produitApi.supprimer(this.confirm.cible.id)
       this.confirm = { visible: false, cible: null }
       this.charger()
+    },
+    // ── QR Code ──────────────────────────────────────────────────────
+    ouvrirQr(p) {
+      this.produitQr = p
+      this.modalQr   = true
+    },
+    qrUrl(id) {
+      // /api/qr/produit/{id} — image PNG servie par le backend
+      return `/api/qr/produit/${id}?t=${Date.now()}`
+    },
+    imprimerQrProduit() {
+      if (!this.produitQr) return
+      const win = window.open('', '_blank')
+      win.document.write(`
+        <html><head><title>QR — ${this.produitQr.nom}</title>
+        <style>
+          body { font-family: sans-serif; text-align: center; padding: 40px; }
+          img  { width: 280px; height: 280px; border: 1px solid #e2e8f0; border-radius: 8px; }
+          h2   { font-size: 16px; margin-top: 14px; color: #1e3a5f; }
+          code { font-size: 13px; background: #f1f5f9; padding: 3px 8px; border-radius: 4px; }
+        </style></head>
+        <body>
+          <img src="${this.qrUrl(this.produitQr.id)}" />
+          <h2>${this.produitQr.nom}</h2>
+          <code>${this.produitQr.reference}</code>
+          <script>window.onload = () => { window.print(); window.close(); }<\/script>
+        </body></html>
+      `)
+      win.document.close()
     }
   }
 }

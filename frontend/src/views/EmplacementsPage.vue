@@ -2,41 +2,39 @@
   <div>
     <div class="page-header">
       <h1 class="page-title">Gestion des emplacements</h1>
-      <p class="page-subtitle">Module 17 — Hiérarchie : Entrepôt → Zone → Rayon → Étagère → Emplacement</p>
+      <p class="page-subtitle">Module 17 — Entrepôt → Zone → Rayon → Étagère → Emplacement</p>
     </div>
 
-    <!-- Breadcrumb de navigation -->
+    <!-- Breadcrumb navigation -->
     <div class="breadcrumb-nav">
       <button class="breadcrumb-item" :class="{ active: niveau === 'rayon' }" @click="allerNiveau('rayon')">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M3 9.5L12 4l9 5.5V20H3V9.5z" stroke="currentColor" stroke-width="1.8"/></svg>
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M4 6h16M4 12h16M4 18h16" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
         Rayons
       </button>
       <span class="breadcrumb-sep">›</span>
       <button class="breadcrumb-item" :class="{ active: niveau === 'etagere' }"
         @click="allerNiveau('etagere')" :disabled="!rayonSelectionne">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M4 6h16M4 12h16M4 18h16" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
         Étagères {{ rayonSelectionne ? '— ' + rayonSelectionne.nom : '' }}
       </button>
       <span class="breadcrumb-sep">›</span>
       <button class="breadcrumb-item" :class="{ active: niveau === 'emplacement' }"
         @click="allerNiveau('emplacement')" :disabled="!etagereSelectionnee">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none"><rect x="3" y="3" width="7" height="7" rx="1" stroke="currentColor" stroke-width="1.8"/><rect x="14" y="3" width="7" height="7" rx="1" stroke="currentColor" stroke-width="1.8"/><rect x="3" y="14" width="7" height="7" rx="1" stroke="currentColor" stroke-width="1.8"/><rect x="14" y="14" width="7" height="7" rx="1" stroke="currentColor" stroke-width="1.8"/></svg>
         Emplacements {{ etagereSelectionnee ? '— ' + etagereSelectionnee.nom : '' }}
       </button>
     </div>
 
-    <!-- Filtre par zone -->
-    <div class="card" style="margin-bottom:16px;padding:16px 20px;" v-if="niveau === 'rayon'">
-      <div class="form-row" style="margin:0;gap:12px;">
-        <div class="form-group" style="margin:0;flex:1;">
-          <label class="form-label">Filtrer par entrepôt</label>
+    <!-- Filtre entrepôt/zone -->
+    <div class="card" style="margin-bottom:16px;padding:14px 20px;" v-if="niveau === 'rayon'">
+      <div style="display:flex;gap:12px;flex-wrap:wrap;">
+        <div class="form-group" style="margin:0;flex:1;min-width:180px;">
+          <label class="form-label">Entrepôt</label>
           <select class="form-select" v-model.number="filtreEntrepotId" @change="filtreZoneId = null">
             <option :value="null">Tous les entrepôts</option>
             <option v-for="e in entrepots" :key="e.id" :value="e.id">{{ e.nom }}</option>
           </select>
         </div>
-        <div class="form-group" style="margin:0;flex:1;">
-          <label class="form-label">Filtrer par zone</label>
+        <div class="form-group" style="margin:0;flex:1;min-width:180px;">
+          <label class="form-label">Zone</label>
           <select class="form-select" v-model.number="filtreZoneId" :disabled="!filtreEntrepotId">
             <option :value="null">Toutes les zones</option>
             <option v-for="z in zonesFiltrees" :key="z.id" :value="z.id">{{ z.nom }}</option>
@@ -45,7 +43,7 @@
       </div>
     </div>
 
-    <!-- ═══════════════════════ NIVEAU RAYONS ═══════════════════════ -->
+    <!-- RAYONS -->
     <div v-if="niveau === 'rayon'" class="card">
       <div class="toolbar">
         <div class="search-box">
@@ -57,43 +55,26 @@
           Nouveau rayon
         </button>
       </div>
-
       <div class="table-wrap">
         <table>
-          <thead>
-            <tr>
-              <th>Code</th><th>Nom</th><th>Entrepôt</th><th>Zone</th>
-              <th style="text-align:center;">Étagères</th><th>Statut</th>
-              <th style="text-align:right;">Actions</th>
-            </tr>
-          </thead>
+          <thead><tr>
+            <th>Code</th><th>Nom</th><th>Entrepôt</th><th>Zone</th>
+            <th style="text-align:center;">Étagères</th><th>Statut</th>
+            <th style="text-align:right;">Actions</th>
+          </tr></thead>
           <tbody>
             <tr v-if="chargement"><td colspan="7" class="empty-state">Chargement...</td></tr>
-            <tr v-else-if="listeFiltree.length === 0">
-              <td colspan="7" class="empty-state">
-                <svg width="40" height="40" viewBox="0 0 24 24" fill="none" style="display:block;margin:0 auto 8px;opacity:.25;"><path d="M4 6h16M4 12h16M4 18h16" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
-                Aucun rayon. Créez-en un pour commencer.
-              </td>
-            </tr>
+            <tr v-else-if="listeFiltree.length === 0"><td colspan="7" class="empty-state">Aucun rayon. Créez-en un.</td></tr>
             <tr v-for="r in listeFiltree" :key="r.id" :class="{ 'row-inactive': !r.actif }">
               <td><code class="ref-code">{{ r.code }}</code></td>
               <td style="font-weight:600;">{{ r.nom }}</td>
               <td>{{ r.entrepotNom }}</td>
               <td><span class="badge badge-info">{{ r.zoneNom }}</span></td>
-              <td style="text-align:center;">
-                <span class="badge badge-navy">{{ r.nbEtageres }}</span>
-              </td>
-              <td>
-                <span class="badge" :class="r.actif ? 'badge-success' : 'badge-danger'">
-                  {{ r.actif ? 'Actif' : 'Inactif' }}
-                </span>
-              </td>
+              <td style="text-align:center;"><span class="badge badge-navy">{{ r.nbEtageres }}</span></td>
+              <td><span class="badge" :class="r.actif ? 'badge-success' : 'badge-danger'">{{ r.actif ? 'Actif' : 'Inactif' }}</span></td>
               <td style="text-align:right;">
                 <div style="display:flex;gap:6px;justify-content:flex-end;">
-                  <button class="btn btn-primary btn-sm" @click="selectionnerRayon(r)" title="Voir les étagères">
-                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none"><path d="M4 6h16M4 12h16M4 18h16" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
-                    Étagères
-                  </button>
+                  <button class="btn btn-primary btn-sm" @click="selectionnerRayon(r)">Étagères →</button>
                   <button v-if="peutEcrire" class="btn btn-outline btn-sm" @click="ouvrirModal('rayon', r)">Éditer</button>
                   <button v-if="peutEcrire && r.actif" class="btn btn-danger btn-sm" @click="demanderDesactivation('rayon', r)">Désactiver</button>
                 </div>
@@ -104,53 +85,37 @@
       </div>
     </div>
 
-    <!-- ═══════════════════════ NIVEAU ÉTAGÈRES ═══════════════════════ -->
+    <!-- ÉTAGÈRES -->
     <div v-if="niveau === 'etagere'" class="card">
       <div class="toolbar">
         <div style="display:flex;align-items:center;gap:8px;">
           <button class="btn btn-outline btn-sm" @click="allerNiveau('rayon')">← Retour</button>
-          <span style="font-size:.85rem;color:var(--gray-500);">
-            Rayon : <strong>{{ rayonSelectionne?.code }} — {{ rayonSelectionne?.nom }}</strong>
-          </span>
+          <span style="font-size:.84rem;color:var(--gray-500);">Rayon : <strong>{{ rayonSelectionne?.code }} — {{ rayonSelectionne?.nom }}</strong></span>
         </div>
         <button v-if="peutEcrire" class="btn btn-primary" @click="ouvrirModal('etagere')">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M12 5v14M5 12h14" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg>
           Nouvelle étagère
         </button>
       </div>
-
       <div class="table-wrap">
         <table>
-          <thead>
-            <tr>
-              <th>Code</th><th>Nom</th><th>Niveaux</th>
-              <th style="text-align:center;">Emplacements</th><th>Statut</th>
-              <th style="text-align:right;">Actions</th>
-            </tr>
-          </thead>
+          <thead><tr>
+            <th>Code</th><th>Nom</th><th>Niveaux</th>
+            <th style="text-align:center;">Emplacements</th><th>Statut</th>
+            <th style="text-align:right;">Actions</th>
+          </tr></thead>
           <tbody>
             <tr v-if="chargement"><td colspan="6" class="empty-state">Chargement...</td></tr>
-            <tr v-else-if="etageres.length === 0">
-              <td colspan="6" class="empty-state">Aucune étagère dans ce rayon.</td>
-            </tr>
+            <tr v-else-if="etageres.length === 0"><td colspan="6" class="empty-state">Aucune étagère dans ce rayon.</td></tr>
             <tr v-for="e in etageres" :key="e.id" :class="{ 'row-inactive': !e.actif }">
               <td><code class="ref-code">{{ e.code }}</code></td>
               <td style="font-weight:600;">{{ e.nom }}</td>
               <td>{{ e.niveaux || '—' }}</td>
-              <td style="text-align:center;">
-                <span class="badge badge-navy">{{ e.nbEmplacements }}</span>
-              </td>
-              <td>
-                <span class="badge" :class="e.actif ? 'badge-success' : 'badge-danger'">
-                  {{ e.actif ? 'Actif' : 'Inactif' }}
-                </span>
-              </td>
+              <td style="text-align:center;"><span class="badge badge-navy">{{ e.nbEmplacements }}</span></td>
+              <td><span class="badge" :class="e.actif ? 'badge-success' : 'badge-danger'">{{ e.actif ? 'Actif' : 'Inactif' }}</span></td>
               <td style="text-align:right;">
                 <div style="display:flex;gap:6px;justify-content:flex-end;">
-                  <button class="btn btn-primary btn-sm" @click="selectionnerEtagere(e)" title="Voir les emplacements">
-                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none"><rect x="3" y="3" width="7" height="7" rx="1" stroke="currentColor" stroke-width="1.8"/><rect x="14" y="3" width="7" height="7" rx="1" stroke="currentColor" stroke-width="1.8"/><rect x="3" y="14" width="7" height="7" rx="1" stroke="currentColor" stroke-width="1.8"/><rect x="14" y="14" width="7" height="7" rx="1" stroke="currentColor" stroke-width="1.8"/></svg>
-                    Emplacements
-                  </button>
+                  <button class="btn btn-primary btn-sm" @click="selectionnerEtagere(e)">Emplacements →</button>
                   <button v-if="peutEcrire" class="btn btn-outline btn-sm" @click="ouvrirModal('etagere', e)">Éditer</button>
                   <button v-if="peutEcrire && e.actif" class="btn btn-danger btn-sm" @click="demanderDesactivation('etagere', e)">Désactiver</button>
                 </div>
@@ -161,64 +126,44 @@
       </div>
     </div>
 
-    <!-- ═══════════════════════ NIVEAU EMPLACEMENTS ═══════════════════════ -->
+    <!-- EMPLACEMENTS -->
     <div v-if="niveau === 'emplacement'" class="card">
       <div class="toolbar">
         <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
           <button class="btn btn-outline btn-sm" @click="allerNiveau('etagere')">← Retour</button>
-          <div class="chemin-complet">
-            <svg width="13" height="13" viewBox="0 0 24 24" fill="none"><path d="M3 9.5L12 4l9 5.5V20H3V9.5z" stroke="currentColor" stroke-width="1.8"/></svg>
-            {{ etagereSelectionnee?.entrepotNom }}
-            <span class="sep">/</span>{{ etagereSelectionnee?.zoneNom }}
-            <span class="sep">/</span>{{ etagereSelectionnee?.rayonNom }}
-            <span class="sep">/</span><strong>{{ etagereSelectionnee?.nom }}</strong>
-          </div>
+          <span class="chemin">{{ etagereSelectionnee?.entrepotNom }} / {{ etagereSelectionnee?.zoneNom }} / {{ etagereSelectionnee?.rayonNom }} / <strong>{{ etagereSelectionnee?.nom }}</strong></span>
         </div>
         <button v-if="peutEcrire" class="btn btn-primary" @click="ouvrirModal('emplacement')">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M12 5v14M5 12h14" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg>
           Nouvel emplacement
         </button>
       </div>
-
       <div class="table-wrap">
         <table>
-          <thead>
-            <tr>
-              <th>Code complet</th><th>Nom</th><th>Capacité</th>
-              <th>Occupation</th><th>Statut</th>
-              <th v-if="peutEcrire" style="text-align:right;">Actions</th>
-            </tr>
-          </thead>
+          <thead><tr>
+            <th>Code complet</th><th>Nom</th><th>Capacité</th>
+            <th>Occupation</th><th>Statut</th>
+            <th v-if="peutEcrire" style="text-align:right;">Actions</th>
+          </tr></thead>
           <tbody>
             <tr v-if="chargement"><td colspan="6" class="empty-state">Chargement...</td></tr>
-            <tr v-else-if="emplacements.length === 0">
-              <td colspan="6" class="empty-state">Aucun emplacement dans cette étagère.</td>
-            </tr>
+            <tr v-else-if="emplacements.length === 0"><td colspan="6" class="empty-state">Aucun emplacement dans cette étagère.</td></tr>
             <tr v-for="emp in emplacements" :key="emp.id" :class="{ 'row-inactive': !emp.actif }">
-              <td>
-                <code class="ref-code-lg">{{ emp.codeComplet }}</code>
-              </td>
+              <td><code class="ref-code-lg">{{ emp.codeComplet }}</code></td>
               <td style="font-weight:600;">{{ emp.nom }}</td>
-              <td style="font-size:.85rem;color:var(--gray-600);">
-                {{ emp.capaciteMax ? emp.capaciteUtilisee + ' / ' + emp.capaciteMax : '—' }}
-              </td>
+              <td style="font-size:.84rem;color:var(--gray-600);">{{ emp.capaciteMax ? emp.capaciteUtilisee + ' / ' + emp.capaciteMax : '—' }}</td>
               <td>
                 <div v-if="emp.capaciteMax" style="display:flex;align-items:center;gap:8px;">
                   <div class="progress-bar" style="width:80px;">
                     <div class="progress-fill"
                       :class="(emp.tauxOccupation||0) < 60 ? 'progress-low' : (emp.tauxOccupation||0) < 85 ? 'progress-mid' : 'progress-high'"
-                      :style="{ width: (emp.tauxOccupation || 0) + '%' }">
-                    </div>
+                      :style="{ width: (emp.tauxOccupation||0) + '%' }"></div>
                   </div>
-                  <span style="font-size:.78rem;color:var(--gray-500);">{{ emp.tauxOccupation || 0 }}%</span>
+                  <span style="font-size:.78rem;color:var(--gray-500);">{{ emp.tauxOccupation||0 }}%</span>
                 </div>
                 <span v-else style="color:var(--gray-300);font-size:.82rem;">sans limite</span>
               </td>
-              <td>
-                <span class="badge" :class="emp.actif ? 'badge-success' : 'badge-danger'">
-                  {{ emp.actif ? 'Actif' : 'Inactif' }}
-                </span>
-              </td>
+              <td><span class="badge" :class="emp.actif ? 'badge-success' : 'badge-danger'">{{ emp.actif ? 'Actif' : 'Inactif' }}</span></td>
               <td v-if="peutEcrire" style="text-align:right;">
                 <div style="display:flex;gap:6px;justify-content:flex-end;">
                   <button class="btn btn-outline btn-sm" @click="ouvrirModal('emplacement', emp)">Éditer</button>
@@ -231,7 +176,7 @@
       </div>
     </div>
 
-    <!-- ═══════════════ MODAL FORMULAIRE ═══════════════ -->
+    <!-- MODAL FORMULAIRE -->
     <div class="modal-overlay" v-if="modal.visible" @click.self="modal.visible = false">
       <div class="modal" style="max-width:520px;">
         <div class="modal-header">
@@ -239,21 +184,18 @@
           <button class="modal-close" @click="modal.visible = false">✕</button>
         </div>
         <div class="modal-body">
-
-          <!-- Rayon -->
+          <!-- RAYON -->
           <template v-if="modal.type === 'rayon'">
             <div class="form-row">
               <div class="form-group">
                 <label class="form-label">Zone parente *</label>
                 <select class="form-select" v-model.number="modal.form.zoneId">
                   <option value="">Sélectionner une zone</option>
-                  <option v-for="z in zones" :key="z.id" :value="z.id">
-                    {{ z.entrepotNom }} — {{ z.nom }}
-                  </option>
+                  <option v-for="z in zones" :key="z.id" :value="z.id">{{ z.entrepotNom }} — {{ z.nom }}</option>
                 </select>
               </div>
               <div class="form-group">
-                <label class="form-label">Code <span class="text-muted">(auto-généré si vide)</span></label>
+                <label class="form-label">Code <span style="color:var(--gray-400);font-size:.74rem;">(auto si vide)</span></label>
                 <input class="form-input" v-model="modal.form.code" placeholder="RAYON-01" />
               </div>
             </div>
@@ -266,19 +208,18 @@
               <input class="form-input" v-model="modal.form.description" placeholder="Description optionnelle" />
             </div>
           </template>
-
-          <!-- Étagère -->
+          <!-- ÉTAGÈRE -->
           <template v-if="modal.type === 'etagere'">
             <div class="form-row">
               <div class="form-group">
-                <label class="form-label">Rayon parent *</label>
+                <label class="form-label">Rayon *</label>
                 <select class="form-select" v-model.number="modal.form.rayonId" :disabled="!!rayonSelectionne">
                   <option value="">Sélectionner</option>
                   <option v-for="r in rayons" :key="r.id" :value="r.id">{{ r.code }} — {{ r.nom }}</option>
                 </select>
               </div>
               <div class="form-group">
-                <label class="form-label">Code <span class="text-muted">(auto si vide)</span></label>
+                <label class="form-label">Code</label>
                 <input class="form-input" v-model="modal.form.code" placeholder="ETAGERE-01" />
               </div>
             </div>
@@ -288,19 +229,17 @@
                 <input class="form-input" v-model="modal.form.nom" placeholder="Étagère A" />
               </div>
               <div class="form-group">
-                <label class="form-label">Nombre de niveaux</label>
+                <label class="form-label">Niveaux</label>
                 <input class="form-input" type="number" min="1" max="20" v-model.number="modal.form.niveaux" placeholder="4" />
               </div>
             </div>
           </template>
-
-          <!-- Emplacement -->
+          <!-- EMPLACEMENT -->
           <template v-if="modal.type === 'emplacement'">
             <div class="form-group">
               <label class="form-label">Étagère parente</label>
-              <div class="form-input" style="background:var(--gray-50);color:var(--gray-600);cursor:default;">
-                {{ etagereSelectionnee?.entrepotNom }} / {{ etagereSelectionnee?.zoneNom }} /
-                {{ etagereSelectionnee?.rayonNom }} / {{ etagereSelectionnee?.nom }}
+              <div class="form-input" style="background:var(--gray-50);color:var(--gray-600);cursor:default;font-size:.84rem;">
+                {{ etagereSelectionnee?.entrepotNom }} / {{ etagereSelectionnee?.zoneNom }} / {{ etagereSelectionnee?.rayonNom }} / {{ etagereSelectionnee?.nom }}
               </div>
             </div>
             <div class="form-row">
@@ -314,12 +253,10 @@
               </div>
             </div>
             <div class="form-group">
-              <label class="form-label">Capacité maximale <span class="text-muted">(unités, optionnel)</span></label>
-              <input class="form-input" type="number" min="0" v-model.number="modal.form.capaciteMax"
-                placeholder="Laisser vide = illimité" style="max-width:200px;" />
+              <label class="form-label">Capacité max <span style="color:var(--gray-400);font-size:.74rem;">(optionnel)</span></label>
+              <input class="form-input" type="number" min="0" v-model.number="modal.form.capaciteMax" placeholder="Illimité" style="max-width:200px;" />
             </div>
           </template>
-
           <div class="form-error" v-if="modal.erreur">{{ modal.erreur }}</div>
         </div>
         <div class="modal-footer">
@@ -331,7 +268,7 @@
       </div>
     </div>
 
-    <!-- Modal confirm désactivation -->
+    <!-- MODAL CONFIRMATION DÉSACTIVATION -->
     <div class="modal-overlay" v-if="confirm.visible" @click.self="confirm.visible = false">
       <div class="modal" style="max-width:400px;">
         <div class="modal-header">
@@ -340,8 +277,7 @@
         </div>
         <div class="modal-body">
           <p style="color:var(--gray-700);font-size:.9rem;line-height:1.6;">
-            Confirmer la désactivation de <strong>{{ confirm.cible?.nom }}</strong> ?<br>
-            Cela n'affectera pas les stocks existants.
+            Confirmer la désactivation de <strong>{{ confirm.cible?.nom }}</strong> ?
           </p>
         </div>
         <div class="modal-footer">
@@ -353,11 +289,11 @@
       </div>
     </div>
 
-    <!-- Toast -->
+    <!-- TOAST -->
     <transition name="toast-slide">
       <div v-if="toast.visible" :class="['toast-notif', toast.type === 'succes' ? 'toast-succes' : 'toast-erreur']">
         <div class="toast-icon">
-          <svg v-if="toast.type === 'succes'" width="20" height="20" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="1.8"/><path d="M8 12l3 3 5-5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          <svg v-if="toast.type==='succes'" width="20" height="20" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="1.8"/><path d="M8 12l3 3 5-5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
           <svg v-else width="20" height="20" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="1.8"/><line x1="12" y1="8" x2="12" y2="12" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
         </div>
         <div class="toast-body">
@@ -383,19 +319,15 @@ export default {
   name: 'EmplacementsPage',
   data() {
     return {
-      // Données
       rayons: [], etageres: [], emplacements: [],
       entrepots: [], zones: [],
-      // Navigation
       niveau: 'rayon',
       rayonSelectionne: null,
       etagereSelectionnee: null,
-      // Filtres
       filtreEntrepotId: null,
       filtreZoneId: null,
       recherche: '',
       chargement: false,
-      // Modal
       modal: { visible: false, type: 'rayon', titre: '', modeEdition: false, editId: null, form: formVide(), erreur: '', chargement: false },
       confirm: { visible: false, type: '', cible: null, chargement: false },
       toast: { visible: false, type: 'succes', message: '', duree: 4000, _timer: null }
@@ -409,7 +341,7 @@ export default {
     },
     listeFiltree() {
       let res = this.rayons
-      if (this.filtreZoneId)    res = res.filter(r => r.zoneId === this.filtreZoneId)
+      if (this.filtreZoneId)      res = res.filter(r => r.zoneId === this.filtreZoneId)
       else if (this.filtreEntrepotId) res = res.filter(r => r.entrepotId === this.filtreEntrepotId)
       const q = this.recherche.toLowerCase().trim()
       if (!q) return res
@@ -426,11 +358,7 @@ export default {
   },
   beforeUnmount() { clearTimeout(this.toast._timer) },
   methods: {
-    // ── Navigation ──────────────────────────────────────────────────
-    allerNiveau(n) {
-      this.niveau = n
-      this.recherche = ''
-    },
+    allerNiveau(n) { this.niveau = n; this.recherche = '' },
     async selectionnerRayon(rayon) {
       this.rayonSelectionne = rayon
       this.niveau = 'etagere'
@@ -441,75 +369,51 @@ export default {
       this.niveau = 'emplacement'
       await this.chargerEmplacements(etagere.id)
     },
-
-    // ── Chargements ─────────────────────────────────────────────────
     async chargerRayons() {
       this.chargement = true
-      try { const r = await rayonApi.findAll(); this.rayons = r.data }
+      try { this.rayons = (await rayonApi.findAll()).data }
       catch { this.afficherToast('Impossible de charger les rayons.', 'erreur') }
       finally { this.chargement = false }
     },
     async chargerEtageres(rayonId) {
       this.chargement = true
-      try { const r = await etagereApi.findAll(rayonId); this.etageres = r.data }
-      catch { this.afficherToast('Impossible de charger les étagères.', 'erreur') }
+      try { this.etageres = (await etagereApi.findAll(rayonId)).data }
       finally { this.chargement = false }
     },
     async chargerEmplacements(etagereId) {
       this.chargement = true
-      try { const r = await emplacementApi.findByEtagere(etagereId); this.emplacements = r.data }
-      catch { this.afficherToast('Impossible de charger les emplacements.', 'erreur') }
+      try { this.emplacements = (await emplacementApi.findByEtagere(etagereId)).data }
       finally { this.chargement = false }
     },
-    async chargerEntrepots() {
-      const r = await entrepotApi.findAll(); this.entrepots = r.data
-    },
-    async chargerZones() {
-      const r = await zoneApi.findAll(); this.zones = r.data
-    },
-
-    // ── Modal ────────────────────────────────────────────────────────
+    async chargerEntrepots() { this.entrepots = (await entrepotApi.findAll()).data },
+    async chargerZones()     { this.zones     = (await zoneApi.findAll()).data    },
     ouvrirModal(type, item = null) {
       this.modal.type       = type
       this.modal.modeEdition = !!item
       this.modal.editId     = item?.id || null
       this.modal.erreur     = ''
       this.modal.form       = formVide()
-
       if (item) {
-        // Mode édition — pré-remplir
         Object.assign(this.modal.form, {
-          nom:         item.nom,
-          code:        item.code,
-          description: item.description || '',
-          niveaux:     item.niveaux,
-          capaciteMax: item.capaciteMax,
-          zoneId:      item.zoneId,
-          rayonId:     item.rayonId,
-          etagereId:   item.etagereId
+          nom: item.nom, code: item.code, description: item.description || '',
+          niveaux: item.niveaux, capaciteMax: item.capaciteMax,
+          zoneId: item.zoneId, rayonId: item.rayonId, etagereId: item.etagereId
         })
       } else {
-        // Mode création — pré-remplir la référence parente
-        if (type === 'etagere' && this.rayonSelectionne)
-          this.modal.form.rayonId = this.rayonSelectionne.id
-        if (type === 'emplacement' && this.etagereSelectionnee)
-          this.modal.form.etagereId = this.etagereSelectionnee.id
+        if (type === 'etagere' && this.rayonSelectionne)     this.modal.form.rayonId   = this.rayonSelectionne.id
+        if (type === 'emplacement' && this.etagereSelectionnee) this.modal.form.etagereId = this.etagereSelectionnee.id
       }
-
       const labels = { rayon: 'rayon', etagere: 'étagère', emplacement: 'emplacement' }
-      this.modal.titre = (item ? 'Modifier le ' : 'Nouveau ') + labels[type]
+      this.modal.titre  = (item ? 'Modifier le ' : 'Nouveau ') + labels[type]
       this.modal.visible = true
     },
-
     async sauvegarder() {
       this.modal.erreur = ''
       const f = this.modal.form
-
       if (!f.nom?.trim()) { this.modal.erreur = 'Le nom est requis.'; return }
-      if (this.modal.type === 'rayon'      && !f.zoneId)    { this.modal.erreur = 'La zone est requise.'; return }
-      if (this.modal.type === 'etagere'    && !f.rayonId)   { this.modal.erreur = 'Le rayon est requis.'; return }
+      if (this.modal.type === 'rayon'       && !f.zoneId)   { this.modal.erreur = 'La zone est requise.'; return }
+      if (this.modal.type === 'etagere'     && !f.rayonId)  { this.modal.erreur = 'Le rayon est requis.'; return }
       if (this.modal.type === 'emplacement' && !f.code?.trim()) { this.modal.erreur = 'Le code est requis.'; return }
-
       this.modal.chargement = true
       try {
         const dto = { ...f }
@@ -528,16 +432,12 @@ export default {
           if (this.etagereSelectionnee) await this.chargerEmplacements(this.etagereSelectionnee.id)
         }
         this.modal.visible = false
-        this.afficherToast(this.modal.modeEdition ? 'Mis à jour avec succès.' : 'Créé avec succès.', 'succes')
+        this.afficherToast(this.modal.modeEdition ? 'Mis à jour.' : 'Créé avec succès.', 'succes')
       } catch (e) {
         this.modal.erreur = e.response?.data?.message || 'Une erreur est survenue.'
       } finally { this.modal.chargement = false }
     },
-
-    // ── Désactivation ────────────────────────────────────────────────
-    demanderDesactivation(type, item) {
-      this.confirm = { visible: true, type, cible: item, chargement: false }
-    },
+    demanderDesactivation(type, item) { this.confirm = { visible: true, type, cible: item, chargement: false } },
     async confirmerDesactivation() {
       this.confirm.chargement = true
       try {
@@ -547,20 +447,15 @@ export default {
         else if (type === 'emplacement') await emplacementApi.desactiver(cible.id)
         this.confirm.visible = false
         this.afficherToast(this.typeLabel(type) + ' désactivé(e).', 'succes')
-        // Recharger
-        if (type === 'rayon')       await this.chargerRayons()
-        else if (type === 'etagere' && this.rayonSelectionne) await this.chargerEtageres(this.rayonSelectionne.id)
-        else if (type === 'emplacement' && this.etagereSelectionnee) await this.chargerEmplacements(this.etagereSelectionnee.id)
+        if (type === 'rayon')            await this.chargerRayons()
+        else if (type === 'etagere')     await this.chargerEtageres(this.rayonSelectionne.id)
+        else                             await this.chargerEmplacements(this.etagereSelectionnee.id)
       } catch (e) {
         this.confirm.visible = false
         this.afficherToast(e.response?.data?.message || 'Impossible de désactiver.', 'erreur')
       } finally { this.confirm.chargement = false }
     },
-
-    // ── Helpers ───────────────────────────────────────────────────────
-    typeLabel(type) {
-      return { rayon: 'Rayon', etagere: 'Étagère', emplacement: 'Emplacement' }[type] || type
-    },
+    typeLabel(type) { return { rayon: 'Rayon', etagere: 'Étagère', emplacement: 'Emplacement' }[type] || type },
     afficherToast(message, type = 'succes', duree = 4000) {
       clearTimeout(this.toast._timer)
       this.toast = { visible: true, type, message, duree, _timer: null }
@@ -572,35 +467,22 @@ export default {
 </script>
 
 <style scoped>
-.breadcrumb-nav {
-  display: flex; align-items: center; gap: 6px;
-  margin-bottom: 16px; flex-wrap: wrap;
-}
+.breadcrumb-nav { display:flex;align-items:center;gap:6px;margin-bottom:16px;flex-wrap:wrap; }
 .breadcrumb-item {
-  display: flex; align-items: center; gap: 5px;
-  padding: 7px 14px; border-radius: 999px;
-  border: 1px solid var(--gray-200); background: var(--white);
-  color: var(--gray-500); font-size: .82rem; font-weight: 500;
-  cursor: pointer; transition: all .15s;
+  display:flex;align-items:center;gap:5px;
+  padding:7px 14px;border-radius:999px;
+  border:1px solid var(--gray-200);background:var(--white);
+  color:var(--gray-500);font-size:.82rem;font-weight:500;cursor:pointer;transition:all .15s;
 }
-.breadcrumb-item:hover:not(:disabled) { background: var(--gray-50); color: var(--navy); border-color: var(--navy); }
-.breadcrumb-item.active { background: var(--navy); color: #fff; border-color: var(--navy); }
-.breadcrumb-item:disabled { opacity: .4; cursor: not-allowed; }
-.breadcrumb-sep { color: var(--gray-300); font-size: 1.1rem; }
-
-.text-muted { color: var(--gray-400); font-size: .75rem; font-weight: 400; }
-.empty-state { text-align: center; padding: 48px 20px; color: var(--gray-400); font-size: .9rem; }
-.ref-code { font-size: .82rem; background: var(--navy-xlight); color: var(--navy); padding: 2px 8px; border-radius: 4px; font-family: monospace; font-weight: 600; }
-.ref-code-lg { font-size: .78rem; background: var(--gray-100); color: var(--gray-700); padding: 3px 8px; border-radius: 4px; font-family: monospace; }
-.row-inactive { opacity: .5; }
-.row-inactive:hover { opacity: .7 !important; }
-
-.chemin-complet {
-  display: flex; align-items: center; gap: 4px;
-  font-size: .82rem; color: var(--gray-500);
-}
-.chemin-complet .sep { color: var(--gray-300); margin: 0 1px; }
-
+.breadcrumb-item.active { background:var(--navy);color:#fff;border-color:var(--navy); }
+.breadcrumb-item:hover:not(:disabled):not(.active) { background:var(--gray-50);color:var(--navy);border-color:var(--navy); }
+.breadcrumb-item:disabled { opacity:.4;cursor:not-allowed; }
+.breadcrumb-sep { color:var(--gray-300);font-size:1.1rem; }
+.empty-state { text-align:center;padding:40px 20px;color:var(--gray-400);font-size:.9rem; }
+.ref-code { font-size:.82rem;background:var(--navy-xlight);color:var(--navy);padding:2px 8px;border-radius:4px;font-family:monospace;font-weight:600; }
+.ref-code-lg { font-size:.76rem;background:var(--gray-100);color:var(--gray-700);padding:3px 8px;border-radius:4px;font-family:monospace; }
+.row-inactive { opacity:.5; }
+.chemin { font-size:.82rem;color:var(--gray-500); }
 /* Toast */
 .toast-notif { position:fixed;top:24px;right:24px;z-index:9999;display:flex;align-items:flex-start;gap:12px;border-radius:var(--radius);box-shadow:var(--shadow-lg);padding:16px 14px 12px 16px;max-width:420px;min-width:280px; }
 .toast-succes { background:#f0fdf4;border:1px solid #86efac;border-left:4px solid var(--success); }

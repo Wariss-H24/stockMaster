@@ -334,7 +334,8 @@
 </template>
 
 <script>
-import { BrowserMultiFormatReader, NotFoundException } from '@zxing/browser'
+import { BrowserMultiFormatReader } from '@zxing/browser'
+import { NotFoundException } from '@zxing/library'
 import { produitApi, emplacementApi, qrApi } from '../services/api.js'
 import { authStore } from '../services/authStore.js'
 
@@ -414,17 +415,26 @@ export default {
       if (!this.selectionId) return
       this.chargementQr = true
       try {
-        const urlImg = this.typeQr === 'produit'
-          ? qrApi.urlProduit(this.selectionId)
-          : qrApi.urlEmplacement(this.selectionId)
+        // Télécharger l'image via Axios (avec JWT) et créer un blob URL local
+        const res = this.typeQr === 'produit'
+          ? await qrApi.getProduitPng(this.selectionId)
+          : await qrApi.getEmplacementPng(this.selectionId)
+
+        // Révoquer l'ancienne blob URL si elle existe
+        if (this.qrGenere?.blobUrl) URL.revokeObjectURL(this.qrGenere.blobUrl)
+
+        const blobUrl = URL.createObjectURL(res.data)
 
         this.qrGenere = {
-          url:   urlImg + '?t=' + Date.now(),
-          label: this.typeQr === 'produit'
+          url:     blobUrl,   // blob URL locale — pas de problème d'auth
+          blobUrl: blobUrl,   // garde une ref pour révoquer plus tard
+          label:   this.typeQr === 'produit'
             ? `${this.selectionItem.nom} — ${this.selectionItem.reference}`
             : `${this.selectionItem.code} — ${this.selectionItem.codeComplet}`,
           id: this.selectionId
         }
+      } catch (e) {
+        console.error('Erreur génération QR:', e)
       } finally {
         this.chargementQr = false
       }
