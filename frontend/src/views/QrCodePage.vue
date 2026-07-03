@@ -334,7 +334,8 @@
 </template>
 
 <script>
-import { BrowserMultiFormatReader, NotFoundException } from '@zxing/browser'
+import { BrowserMultiFormatReader } from '@zxing/browser'
+import { NotFoundException } from '@zxing/library'
 import { produitApi, emplacementApi, qrApi } from '../services/api.js'
 import { authStore } from '../services/authStore.js'
 
@@ -391,6 +392,7 @@ export default {
 
   beforeUnmount() {
     this.arreterScan()
+    if (this.qrGenere?.url?.startsWith('blob:')) URL.revokeObjectURL(this.qrGenere.url)
   },
 
   methods: {
@@ -414,12 +416,14 @@ export default {
       if (!this.selectionId) return
       this.chargementQr = true
       try {
-        const urlImg = this.typeQr === 'produit'
-          ? qrApi.urlProduit(this.selectionId)
-          : qrApi.urlEmplacement(this.selectionId)
+        const res = this.typeQr === 'produit'
+          ? await qrApi.getProduitPng(this.selectionId)
+          : await qrApi.getEmplacementPng(this.selectionId)
+
+        if (this.qrGenere?.url?.startsWith('blob:')) URL.revokeObjectURL(this.qrGenere.url)
 
         this.qrGenere = {
-          url:   urlImg + '?t=' + Date.now(),
+          url:   URL.createObjectURL(res.data),
           label: this.typeQr === 'produit'
             ? `${this.selectionItem.nom} — ${this.selectionItem.reference}`
             : `${this.selectionItem.code} — ${this.selectionItem.codeComplet}`,
