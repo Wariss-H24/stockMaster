@@ -72,6 +72,13 @@
 			<scope>runtime</scope>
 		</dependency>
 
+		<!-- PostgreSQL pour Render (prod) -->
+		<dependency>
+			<groupId>org.postgresql</groupId>
+			<artifactId>postgresql</artifactId>
+			<scope>runtime</scope>
+		</dependency>
+
 		<!-- Lombok : génère getters/setters/constructeurs automatiquement -->
 		<dependency>
 			<groupId>org.projectlombok</groupId>
@@ -165,4 +172,14 @@
 			</plugin>
 		</plugins>
 	</build>
+
+	<profiles>
+		<!-- Profil prod : activé par -Pprod lors du build Render -->
+		<profile>
+			<id>prod</id>
+			<properties>
+				<spring.profiles.active>prod</spring.profiles.active>
+			</properties>
+		</profile>
+	</profiles>
 </project>

@@ -392,6 +392,7 @@ export default {
 
   beforeUnmount() {
     this.arreterScan()
+    if (this.qrGenere?.url?.startsWith('blob:')) URL.revokeObjectURL(this.qrGenere.url)
   },
 
   methods: {
@@ -415,20 +416,15 @@ export default {
       if (!this.selectionId) return
       this.chargementQr = true
       try {
-        // Télécharger l'image via Axios (avec JWT) et créer un blob URL local
         const res = this.typeQr === 'produit'
           ? await qrApi.getProduitPng(this.selectionId)
           : await qrApi.getEmplacementPng(this.selectionId)
 
-        // Révoquer l'ancienne blob URL si elle existe
-        if (this.qrGenere?.blobUrl) URL.revokeObjectURL(this.qrGenere.blobUrl)
-
-        const blobUrl = URL.createObjectURL(res.data)
+        if (this.qrGenere?.url?.startsWith('blob:')) URL.revokeObjectURL(this.qrGenere.url)
 
         this.qrGenere = {
-          url:     blobUrl,   // blob URL locale — pas de problème d'auth
-          blobUrl: blobUrl,   // garde une ref pour révoquer plus tard
-          label:   this.typeQr === 'produit'
+          url:   URL.createObjectURL(res.data),
+          label: this.typeQr === 'produit'
             ? `${this.selectionItem.nom} — ${this.selectionItem.reference}`
             : `${this.selectionItem.code} — ${this.selectionItem.codeComplet}`,
           id: this.selectionId

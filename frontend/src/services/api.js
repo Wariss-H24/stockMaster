@@ -1,7 +1,13 @@
 import axios from 'axios'
 import { authStore } from './authStore'
 
-const api = axios.create({ baseURL: '/api' })
+// En dev : baseURL = '/api' (proxy Vite vers localhost:8080)
+// En prod : baseURL = 'https://stockmaster-backend.onrender.com/api'
+const baseURL = import.meta.env.VITE_API_URL
+  ? `${import.meta.env.VITE_API_URL}/api`
+  : '/api'
+
+const api = axios.create({ baseURL })
 
 api.interceptors.request.use(config => {
   if (authStore.token) config.headers.Authorization = `Bearer ${authStore.token}`
@@ -188,16 +194,15 @@ export const emplacementApi = {
 
 // ── Module 18 — QR Code ───────────────────────────────────────────────────────
 export const qrApi = {
-  // URLs directes pour les balises <img src="..."> — utilisées comme src d'image
-  // Note: baseURL de axios est /api, donc on part de /api/qr/...
+  // URLs directes pour <img src> — chemin absolu (pas via axios)
   urlProduit:      (id) => `/api/qr/produit/${id}`,
   urlEmplacement:  (id) => `/api/qr/emplacement/${id}`,
   urlStock:        (id) => `/api/qr/stock/${id}`,
 
-  // Téléchargement PNG (axios avec baseURL=/api donc chemin relatif)
+  // Téléchargement via Axios — chemin RELATIF (baseURL='/api' déjà préfixé)
   getProduitPng:     (id) => api.get(`/qr/produit/${id}`,     { responseType: 'blob' }),
   getEmplacementPng: (id) => api.get(`/qr/emplacement/${id}`, { responseType: 'blob' }),
 
-  // Résolution après scan — retourne les données complètes
+  // Résolution après scan
   resoudre: (type, id) => api.get('/qr/resolve', { params: { type, id } })
 }

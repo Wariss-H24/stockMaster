@@ -1,0 +1,29 @@
+services:
+  # ── Backend Spring Boot ───────────────────────────────────────────────────
+  - type: web
+    name: stockmaster-backend
+    runtime: java
+    region: frankfurt          # proche de l'Europe
+    plan: free
+    rootDir: backend
+    buildCommand: ./mvnw clean package -DskipTests -Pprod
+    startCommand: java -Dspring.profiles.active=prod -jar target/backend-0.0.1-SNAPSHOT.jar
+    envVars:
+      - key: JWT_SECRET
+        generateValue: true    # Render génère un secret aléatoire automatiquement
+      - key: FRONTEND_URL
+        value: https://stockmaster-frontend.vercel.app   # à mettre à jour après déploiement Vercel
+      - key: JAVA_VERSION
+        value: "21"
+      - key: DATABASE_URL
+        fromDatabase:
+          name: stockmaster-db
+          property: connectionString
+
+databases:
+  # ── PostgreSQL gratuit Render ──────────────────────────────────────────────
+  - name: stockmaster-db
+    databaseName: stockmaster
+    user: stockmaster
+    plan: free
+    region: frankfurt
