@@ -1,0 +1,18 @@
+node_modules/
+dist/
+.env.local
+.env.*.local
+*.log
+# Backend
+backend/target/
+backend/.mvn/wrapper/maven-wrapper.jar
+
+# Frontend
+frontend/node_modules/
+frontend/dist/
+frontend/.env.local
+frontend/.env.*.local
+
+# Divers
+.DS_Store
+EOF

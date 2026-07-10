@@ -7,10 +7,13 @@ import maker.backend.entity.Entrepot;
 import maker.backend.entity.MouvementStock;
 import maker.backend.entity.Produit;
 import maker.backend.entity.Stock;
+import maker.backend.entity.SortieLigne;
 import maker.backend.exception.ResourceNotFoundException;
 import maker.backend.repository.BonSortieRepository;
 import maker.backend.repository.EntrepotRepository;
 import maker.backend.repository.ProduitRepository;
+import maker.backend.repository.StockRepository;
+import maker.backend.service.EmplacementService;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -23,23 +26,26 @@ public class BonSortieService {
     private final BonSortieRepository repo;
     private final EntrepotRepository entrepotRepo;
     private final ProduitRepository produitRepo;
+    private final StockRepository stockRepo;
     private final StockService stockService;
     private final MouvementStockService mouvementService;
 
     public BonSortieService(BonSortieRepository repo,
                             EntrepotRepository entrepotRepo,
                             ProduitRepository produitRepo,
+                            StockRepository stockRepo,
                             StockService stockService,
                             MouvementStockService mouvementService) {
         this.repo = repo;
         this.entrepotRepo = entrepotRepo;
         this.produitRepo = produitRepo;
+        this.stockRepo = stockRepo;
         this.stockService = stockService;
         this.mouvementService = mouvementService;
     }
 
     public java.util.List<BonSortieDTO> findAll() {
-        return repo.findAll().stream().map(this::toDTO).collect(Collectors.toList());
+        return repo.findAllByOrderByDateDesc().stream().map(this::toDTO).collect(Collectors.toList());
     }
 
     public BonSortieDTO findById(Long id) {
@@ -92,15 +98,20 @@ public class BonSortieService {
     }
 
     private void appliquerSortie(BonSortie bon) {
-        for (SortieLigneDTO ligne : bon.getLignes().stream().map(this::toDTO).collect(Collectors.toList())) {
-            Stock stock = stockService.findOrCreateStock(ligne.getProduitId(), bon.getEntrepot().getId(), null);
+        for (SortieLigne ligne : bon.getLignes()) {
+            Stock stock = stockService.findOrCreateStock(ligne.getProduit().getId(), bon.getEntrepot().getId(), null);
             if (stock.getQuantiteDisponible() < ligne.getQuantite()) {
-                throw new IllegalArgumentException("Stock insuffisant pour le produit id=" + ligne.getProduitId() +
-                        " dans l'entrepôt " + bon.getEntrepot().getNom() +
+                throw new IllegalArgumentException("Stock insuffisant pour le produit '" + ligne.getProduit().getNom() +
+                        "' dans l'entrepôt " + bon.getEntrepot().getNom() +
                         " (quantité disponible = " + stock.getQuantiteDisponible() + ")");
             }
             stock.setQuantiteDisponible(stock.getQuantiteDisponible() - ligne.getQuantite());
             stockService.save(stock);
+
+            // Recalcul capacite zone si applicable
+            if (stock.getZone() != null) {
+                stockService.recalculerCapaciteZone(stock.getZone());
+            }
 
             MouvementStock mouvement = new MouvementStock();
             mouvement.setStock(stock);
@@ -110,10 +121,12 @@ public class BonSortieService {
             mouvement.setCommentaire("Sortie validée");
             mouvementService.enregistrer(mouvement);
         }
+        stockService.recalculerCapaciteEntrepot(bon.getEntrepot());
     }
 
     private String generateReference() {
-        return "SORTIE-" + System.currentTimeMillis();
+        long count = repo.countBy() + 1;
+        return String.format("BSO-%04d", count);
     }
 
     private BonSortieDTO toDTO(BonSortie bon) {
@@ -130,11 +143,20 @@ public class BonSortieService {
         return dto;
     }
 
-    private SortieLigneDTO toDTO(maker.backend.entity.SortieLigne ligne) {
+    private SortieLigneDTO toDTO(SortieLigne ligne) {
         SortieLigneDTO dto = new SortieLigneDTO();
         dto.setId(ligne.getId());
         dto.setProduitId(ligne.getProduit().getId());
+        dto.setProduitNom(ligne.getProduit().getNom());
+        dto.setProduitReference(ligne.getProduit().getReference());
         dto.setQuantite(ligne.getQuantite());
+        // Indiquer l'emplacement du stock pour guider le magasinier
+        stockRepo.findByProduitAndEntrepot(ligne.getProduit(), ligne.getBonSortie().getEntrepot())
+            .ifPresent(s -> {
+                if (s.getEmplacement() != null) {
+                    dto.setEmplacementCodeComplet(EmplacementService.buildCodeComplet(s.getEmplacement()));
+                }
+            });
         return dto;
     }
 
@@ -147,8 +169,8 @@ public class BonSortieService {
         return bon;
     }
 
-    private maker.backend.entity.SortieLigne toEntity(SortieLigneDTO dto, BonSortie bon) {
-        maker.backend.entity.SortieLigne ligne = new maker.backend.entity.SortieLigne();
+    private SortieLigne toEntity(SortieLigneDTO dto, BonSortie bon) {
+        SortieLigne ligne = new SortieLigne();
         ligne.setBonSortie(bon);
         ligne.setProduit(findProduit(dto.getProduitId()));
         ligne.setQuantite(dto.getQuantite());

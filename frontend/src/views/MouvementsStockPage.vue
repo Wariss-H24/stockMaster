@@ -66,9 +66,11 @@ export default {
   computed: {
     listeFiltree() {
       const q = this.recherche.toLowerCase()
-      return this.liste.filter(m =>
-        (!q || m.produitNom?.toLowerCase().includes(q) || m.entrepotNom?.toLowerCase().includes(q) || m.zoneNom?.toLowerCase().includes(q) || m.source?.toLowerCase().includes(q))
-      )
+      return this.liste.filter(m => {
+        const matchFiltre = this.filtre === 'TOUS' || m.type === this.filtre
+        const matchSearch = !q || m.produitNom?.toLowerCase().includes(q) || m.entrepotNom?.toLowerCase().includes(q) || m.zoneNom?.toLowerCase().includes(q) || m.source?.toLowerCase().includes(q)
+        return matchFiltre && matchSearch
+      })
     }
   },
   async mounted() { await this.charger() },
@@ -77,19 +79,13 @@ export default {
       this.chargement = true
       try { const res = await mouvementStockApi.findAll(); this.liste = res.data } finally { this.chargement = false }
     },
-    async changerFiltre(type) {
+    changerFiltre(type) {
       this.filtre = type
-      this.chargement = true
-      try {
-        if (type === 'TOUS') {
-          const res = await mouvementStockApi.findAll(); this.liste = res.data
-        } else {
-          const res = await mouvementStockApi.findByType(type); this.liste = res.data
-        }
-      } finally { this.chargement = false }
     },
     formaterDate(date) {
-      return new Date(date).toLocaleString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })
+      if (!date) return '—'
+      const d = new Date(date)
+      return isNaN(d) ? '—' : d.toLocaleString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })
     }
   }
 }

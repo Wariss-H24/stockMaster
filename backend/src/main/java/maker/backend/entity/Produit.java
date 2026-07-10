@@ -24,7 +24,10 @@ public class Produit {
     @NotBlank
     private String nom;
 
-    private String categorie;
+    @ManyToOne
+    @JoinColumn(name = "categorie_id")
+    private Categorie categorie;
+
     private String description;
 
     @Min(0)
@@ -36,6 +39,9 @@ public class Produit {
     private Double poids;
     private Double volume;
 
-    // Suppression logique : le produit reste en base mais n'est plus visible
+    /** Seuil d'alerte stock par défaut pour ce produit (propagé sur les stocks à la création/modification) */
+    @Min(0)
+    private Integer stockMinDefaut = 0;
+
     private boolean supprime = false;
 }

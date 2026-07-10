@@ -1,12 +1,10 @@
 package maker.backend.mapper;
 
 import maker.backend.dto.ProduitDTO;
+import maker.backend.entity.Categorie;
 import maker.backend.entity.Produit;
 import org.springframework.stereotype.Component;
 
-/**
- * Mapper manuel Produit ↔ ProduitDTO.
- */
 @Component
 public class ProduitMapper {
 
@@ -16,12 +14,16 @@ public class ProduitMapper {
         dto.setReference(p.getReference());
         dto.setCodeBarre(p.getCodeBarre());
         dto.setNom(p.getNom());
-        dto.setCategorie(p.getCategorie());
+        if (p.getCategorie() != null) {
+            dto.setCategorieId(p.getCategorie().getId());
+            dto.setCategorieNom(p.getCategorie().getNom());
+        }
         dto.setDescription(p.getDescription());
         dto.setPrixAchat(p.getPrixAchat());
         dto.setPrixVente(p.getPrixVente());
         dto.setPoids(p.getPoids());
         dto.setVolume(p.getVolume());
+        dto.setStockMinDefaut(p.getStockMinDefaut());
         dto.setSupprime(p.isSupprime());
         return dto;
     }
@@ -31,12 +33,12 @@ public class ProduitMapper {
         p.setReference(dto.getReference());
         p.setCodeBarre(dto.getCodeBarre());
         p.setNom(dto.getNom());
-        p.setCategorie(dto.getCategorie());
         p.setDescription(dto.getDescription());
         p.setPrixAchat(dto.getPrixAchat());
         p.setPrixVente(dto.getPrixVente());
         p.setPoids(dto.getPoids());
         p.setVolume(dto.getVolume());
+        p.setStockMinDefaut(dto.getStockMinDefaut() != null ? dto.getStockMinDefaut() : 0);
         p.setSupprime(false);
         return p;
     }

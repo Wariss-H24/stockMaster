@@ -49,7 +49,7 @@
                 <p v-if="p.description" style="font-size:.75rem;color:var(--gray-400);margin-top:1px;">{{ p.description }}</p>
               </td>
               <td>
-                <span class="badge badge-info" v-if="p.categorie">{{ p.categorie }}</span>
+                <span class="badge badge-info" v-if="p.categorieNom">{{ p.categorieNom }}</span>
                 <span v-else style="color:var(--gray-400);">—</span>
               </td>
               <td style="font-size:.875rem;">{{ p.prixAchat != null ? p.prixAchat.toFixed(2) + ' €' : '—' }}</td>
@@ -69,6 +69,16 @@
                       <path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z" stroke="currentColor" stroke-width="1.8"/>
                     </svg>
                     Éditer
+                  </button>
+                  <!-- Bouton QR Code -->
+                  <button class="btn btn-outline btn-sm" @click="ouvrirQr(p)" title="Générer QR Code">
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none">
+                      <rect x="3" y="3" width="7" height="7" rx="1" stroke="currentColor" stroke-width="1.8"/>
+                      <rect x="14" y="3" width="7" height="7" rx="1" stroke="currentColor" stroke-width="1.8"/>
+                      <rect x="3" y="14" width="7" height="7" rx="1" stroke="currentColor" stroke-width="1.8"/>
+                      <path d="M14 14h2M14 18h2M18 14h2M18 18h2" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+                    </svg>
+                    QR
                   </button>
                   <button v-if="peutSupprimer" class="btn btn-danger btn-sm" @click="demanderSuppression(p)">
                     <svg width="13" height="13" viewBox="0 0 24 24" fill="none">
@@ -115,7 +125,10 @@
           <div class="form-row">
             <div class="form-group">
               <label class="form-label">Catégorie</label>
-              <input class="form-input" v-model="form.categorie" placeholder="Informatique" />
+              <select class="form-select" v-model.number="form.categorieId">
+                <option :value="null">— Sans catégorie —</option>
+                <option v-for="c in categories" :key="c.id" :value="c.id">{{ c.nom }}</option>
+              </select>
             </div>
             <div class="form-group">
               <label class="form-label">Description</label>
@@ -142,6 +155,16 @@
               <input class="form-input" type="number" step="0.0001" min="0" v-model.number="form.volume" />
             </div>
           </div>
+          <div class="form-group">
+            <label class="form-label">
+              Stock minimum
+              <span style="font-weight:400;color:var(--gray-400);font-size:.78rem;margin-left:4px;">
+                — une alerte se déclenche quand le stock passe en dessous
+              </span>
+            </label>
+            <input class="form-input" type="number" min="0" v-model.number="form.stockMinDefaut"
+              placeholder="0 = pas d'alerte" style="max-width:180px;" />
+          </div>
           <div class="form-error" v-if="erreur">{{ erreur }}</div>
         </div>
         <div class="modal-footer">
@@ -151,7 +174,6 @@
       </div>
     </div>
 
-    <!-- Modale de confirmation suppression -->
     <ConfirmModal
       v-if="confirm.visible"
       titre="Supprimer le produit"
@@ -161,11 +183,35 @@
       @confirmer="confirmerSuppression"
       @annuler="confirm.visible = false"
     />
+
+    <!-- Modal QR Code -->
+    <div class="modal-overlay" v-if="modalQr" @click.self="modalQr = false">
+      <div class="modal" style="max-width:380px;">
+        <div class="modal-header">
+          <h3 class="modal-title">QR Code — {{ produitQr?.nom }}</h3>
+          <button class="modal-close" @click="modalQr = false">✕</button>
+        </div>
+        <div class="modal-body" style="text-align:center;">
+          <img v-if="produitQr" :src="qrUrl(produitQr.id)" :alt="produitQr.nom"
+            style="width:240px;height:240px;border:1px solid var(--gray-200);border-radius:8px;" />
+          <p style="margin-top:10px;font-size:.84rem;color:var(--gray-600);">
+            <code style="background:var(--gray-100);padding:2px 6px;border-radius:4px;">{{ produitQr?.reference }}</code>
+          </p>
+          <p style="font-size:.78rem;color:var(--gray-400);margin-top:6px;">
+            Scannez avec l'appareil photo ou l'onglet Scanner
+          </p>
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-outline" @click="modalQr = false">Fermer</button>
+          <button class="btn btn-primary" @click="imprimerQrProduit">Imprimer</button>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
 <script>
-import { produitApi } from '../services/api.js'
+import { produitApi, categoryApi } from '../services/api.js'
 import { authStore } from '../services/authStore.js'
 import ConfirmModal from '../components/ConfirmModal.vue'
 
@@ -174,9 +220,12 @@ export default {
   components: { ConfirmModal },
   data() {
     return {
-      liste: [], chargement: true, modal: false, erreur: '', recherche: '',
+      liste: [], categories: [], chargement: true, modal: false, erreur: '', recherche: '',
       confirm: { visible: false, cible: null },
-      form: { id: null, reference: '', codeBarre: '', nom: '', categorie: '', description: '', prixAchat: null, prixVente: null, poids: null, volume: null }
+      form: { id: null, reference: '', codeBarre: '', nom: '', categorieId: null, description: '', prixAchat: null, prixVente: null, poids: null, volume: null, stockMinDefaut: 0 },
+      // QR Code
+      modalQr: false,
+      produitQr: null
     }
   },
   computed: {
@@ -188,11 +237,13 @@ export default {
       return this.liste.filter(p =>
         p.nom?.toLowerCase().includes(q) ||
         p.reference?.toLowerCase().includes(q) ||
-        p.categorie?.toLowerCase().includes(q)
+        p.categorieNom?.toLowerCase().includes(q)
       )
     }
   },
-  async mounted() { await this.charger() },
+  async mounted() {
+    await Promise.all([this.charger(), this.chargerCategories()])
+  },
   methods: {
     marge(p) { return Math.round(((p.prixVente - p.prixAchat) / p.prixVente) * 100) },
     async charger() {
@@ -200,9 +251,15 @@ export default {
       try { const r = await produitApi.findAll(); this.liste = r.data }
       finally { this.chargement = false }
     },
+    async chargerCategories() {
+      const r = await categoryApi.findAll()
+      this.categories = r.data.filter(c => c.actif)
+    },
     ouvrirModal(p = null) {
       this.erreur = ''
-      this.form = p ? { ...p } : { id: null, reference: '', codeBarre: '', nom: '', categorie: '', description: '', prixAchat: null, prixVente: null, poids: null, volume: null }
+      this.form = p
+        ? { id: p.id, reference: p.reference, codeBarre: p.codeBarre, nom: p.nom, categorieId: p.categorieId || null, description: p.description, prixAchat: p.prixAchat, prixVente: p.prixVente, poids: p.poids, volume: p.volume, stockMinDefaut: p.stockMinDefaut || 0 }
+        : { id: null, reference: '', codeBarre: '', nom: '', categorieId: null, description: '', prixAchat: null, prixVente: null, poids: null, volume: null, stockMinDefaut: 0 }
       this.modal = true
     },
     async sauvegarder() {
@@ -216,9 +273,7 @@ export default {
         this.erreur = e.response?.data?.message || 'Erreur lors de la sauvegarde.'
       }
     },
-    demanderSuppression(p) {
-      this.confirm = { visible: true, cible: p }
-    },
+    demanderSuppression(p) { this.confirm = { visible: true, cible: p } },
     async confirmerSuppression() {
       await produitApi.supprimer(this.confirm.cible.id)
       this.confirm = { visible: false, cible: null }

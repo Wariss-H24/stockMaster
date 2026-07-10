@@ -1,0 +1,26 @@
+services:
+  # ── Backend Spring Boot via Docker ────────────────────────────────────────
+  - type: web
+    name: stockmaster-backend
+    runtime: docker
+    region: frankfurt
+    plan: free
+    rootDir: backend
+    dockerfilePath: ./Dockerfile
+    envVars:
+      - key: JWT_SECRET
+        generateValue: true
+      - key: FRONTEND_URL
+        value: https://stockmaster-frontend.vercel.app
+      - key: DATABASE_URL
+        fromDatabase:
+          name: stockmaster-db
+          property: connectionString
+
+databases:
+  # ── PostgreSQL gratuit Render ──────────────────────────────────────────────
+  - name: stockmaster-db
+    databaseName: stockmaster
+    user: stockmaster
+    plan: free
+    region: frankfurt

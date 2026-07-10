@@ -81,6 +81,31 @@
       </div>
     </div>
 
+    <!-- Toast erreur auto-fermant -->
+    <transition name="toast-slide">
+      <div v-if="toast.visible" class="toast-error">
+        <div class="toast-icon">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+            <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="1.8"/>
+            <line x1="12" y1="8" x2="12" y2="12" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+            <line x1="12" y1="16" x2="12.01" y2="16" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/>
+          </svg>
+        </div>
+        <div class="toast-body">
+          <p class="toast-title">Erreur de capacité</p>
+          <p class="toast-message">{{ toast.message }}</p>
+          <div class="toast-progress">
+            <div class="toast-progress-bar" :style="{ animationDuration: toast.duree + 'ms' }"></div>
+          </div>
+        </div>
+        <button class="toast-close" @click="fermerToast">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
+            <path d="M6 6l12 12M18 6L6 18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+          </svg>
+        </button>
+      </div>
+    </transition>
+
     <!-- Modal formulaire -->
     <div class="modal-overlay" v-if="modal" @click.self="modal = false">
       <div class="modal">
@@ -108,10 +133,6 @@
             <div class="form-group">
               <label class="form-label">Capacité totale</label>
               <input class="form-input" type="number" v-model.number="form.capaciteTotale" min="0" />
-            </div>
-            <div class="form-group">
-              <label class="form-label">Capacité utilisée</label>
-              <input class="form-input" type="number" v-model.number="form.capaciteUtilisee" min="0" />
             </div>
           </div>
           <div class="form-error" v-if="erreur">{{ erreur }}</div>
@@ -148,7 +169,8 @@ export default {
     return {
       liste: [], entrepots: [], chargement: true, modal: false, erreur: '', recherche: '',
       confirm: { visible: false, cible: null },
-      form: { id: null, nom: '', entrepotId: '', capaciteTotale: 0, capaciteUtilisee: 0 }
+      form: { id: null, nom: '', entrepotId: '', capaciteTotale: 0 },
+      toast: { visible: false, message: '', duree: 10000, _timer: null }
     }
   },
   computed: {
@@ -168,11 +190,23 @@ export default {
       this.entrepots = e.data
     } finally { this.chargement = false }
   },
+  beforeUnmount() {
+    clearTimeout(this.toast._timer)
+  },
   methods: {
+    afficherToast(message, duree = 10000) {
+      clearTimeout(this.toast._timer)
+      this.toast = { visible: true, message, duree, _timer: null }
+      this.toast._timer = setTimeout(() => { this.toast.visible = false }, duree)
+    },
+    fermerToast() {
+      clearTimeout(this.toast._timer)
+      this.toast.visible = false
+    },
     ouvrirModal(z = null) {
       this.erreur = ''
       this.form = z
-        ? { id: z.id, nom: z.nom, entrepotId: z.entrepotId, capaciteTotale: z.capaciteTotale, capaciteUtilisee: z.capaciteUtilisee }
+        ? { id: z.id, nom: z.nom, entrepotId: z.entrepotId, capaciteTotale: z.capaciteTotale }
         : { id: null, nom: '', entrepotId: '', capaciteTotale: 0, capaciteUtilisee: 0 }
       this.modal = true
     },
@@ -184,7 +218,12 @@ export default {
         this.modal = false
         const r = await zoneApi.findAll(); this.liste = r.data
       } catch (e) {
-        this.erreur = e.response?.data?.message || 'Erreur lors de la sauvegarde.'
+        const msg = e.response?.data?.message || 'Erreur lors de la sauvegarde.'
+        this.erreur = msg
+        // Si c'est une erreur de capacité, afficher aussi le toast
+        if (msg.includes('Capacité dépassée') || msg.includes('capacit')) {
+          this.afficherToast(msg)
+        }
       }
     },
     demanderDesactivation(z) {
@@ -198,3 +237,46 @@ export default {
   }
 }
 </script>
+<style scoped>
+/* ── Toast erreur ── */
+.toast-error {
+  position: fixed;
+  top: 24px;
+  right: 24px;
+  z-index: 9999;
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  background: #fff;
+  border: 1px solid #fca5a5;
+  border-left: 4px solid var(--danger);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-lg);
+  padding: 16px 14px 12px 16px;
+  max-width: 420px;
+  min-width: 300px;
+}
+.toast-icon { color: var(--danger); flex-shrink: 0; margin-top: 1px; }
+.toast-body { flex: 1; min-width: 0; }
+.toast-title { font-weight: 700; font-size: .88rem; color: var(--danger); margin-bottom: 3px; }
+.toast-message { font-size: .83rem; color: var(--gray-700); line-height: 1.4; }
+.toast-close {
+  background: none; border: none; cursor: pointer;
+  color: var(--gray-400); padding: 2px; flex-shrink: 0;
+  border-radius: 4px; display:flex; align-items:center;
+}
+.toast-close:hover { color: var(--gray-700); background: var(--gray-100); }
+.toast-progress { margin-top: 8px; height: 3px; background: var(--danger-bg); border-radius: 999px; overflow: hidden; }
+.toast-progress-bar {
+  height: 100%;
+  background: var(--danger);
+  border-radius: 999px;
+  width: 100%;
+  animation: toast-drain linear forwards;
+}
+@keyframes toast-drain { from { width: 100%; } to { width: 0%; } }
+.toast-slide-enter-active { transition: all .25s ease; }
+.toast-slide-leave-active { transition: all .2s ease; }
+.toast-slide-enter-from { opacity: 0; transform: translateX(40px); }
+.toast-slide-leave-to   { opacity: 0; transform: translateX(40px); }
+</style>

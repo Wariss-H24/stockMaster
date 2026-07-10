@@ -14,7 +14,7 @@
           </svg>
           <input v-model="recherche" placeholder="Rechercher par destination, entrepôt, statut..." />
         </div>
-        <button class="btn btn-primary" @click="ouvrirModal()">
+        <button v-if="peutEcrire" class="btn btn-primary" @click="ouvrirModal()">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
             <path d="M12 5v14M5 12h14" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/>
           </svg>
@@ -46,14 +46,49 @@
               <td>{{ formaterDate(b.date) }}</td>
               <td style="text-align:right;">
                 <button class="btn btn-outline btn-sm" @click="ouvrirModal(b)">Voir</button>
-                <button class="btn btn-primary btn-sm" @click="valider(b)" v-if="b.statut === 'BROUILLON'">Valider</button>
-                <button class="btn btn-danger btn-sm" @click="supprimer(b)" v-if="b.statut === 'BROUILLON'">Supprimer</button>
+                <button v-if="peutEcrire && b.statut === 'BROUILLON'" class="btn btn-primary btn-sm" @click="valider(b)">Valider</button>
+                <button v-if="peutSupprimer && b.statut === 'BROUILLON'" class="btn btn-danger btn-sm" @click="demanderSuppression(b)">Supprimer</button>
               </td>
             </tr>
           </tbody>
         </table>
       </div>
     </div>
+
+    <ConfirmModal
+      v-if="confirm.visible"
+      titre="Supprimer le bon de sortie"
+      :message="`Voulez-vous supprimer le bon #${confirm.cible?.id} (${confirm.cible?.destination}) ? Cette action est irréversible.`"
+      type="danger"
+      label-confirmer="Supprimer"
+      @confirmer="confirmerSuppression"
+      @annuler="confirm.visible = false"
+    />
+
+    <!-- Toast erreur auto-fermant -->
+    <transition name="toast-slide">
+      <div v-if="toast.visible" class="toast-error">
+        <div class="toast-icon">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+            <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="1.8"/>
+            <line x1="12" y1="8" x2="12" y2="12" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+            <line x1="12" y1="16" x2="12.01" y2="16" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/>
+          </svg>
+        </div>
+        <div class="toast-body">
+          <p class="toast-title">Erreur</p>
+          <p class="toast-message">{{ toast.message }}</p>
+          <div class="toast-progress">
+            <div class="toast-progress-bar" :style="{ animationDuration: toast.duree + 'ms' }"></div>
+          </div>
+        </div>
+        <button class="toast-close" @click="fermerToast">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
+            <path d="M6 6l12 12M18 6L6 18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+          </svg>
+        </button>
+      </div>
+    </transition>
 
     <div class="modal-overlay" v-if="modal" @click.self="modal = false">
       <div class="modal large-modal">
@@ -95,6 +130,14 @@
                   <label class="form-label">Quantité *</label>
                   <input class="form-input" type="number" min="1" v-model.number="ligne.quantite" />
                 </div>
+                <!-- Emplacement affiché depuis le stock (info magasinier) -->
+                <div v-if="ligne.emplacementCodeComplet" class="form-group" style="min-width:0;">
+                  <label class="form-label">Aller chercher à</label>
+                  <div class="emp-info-badge">
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z" stroke="currentColor" stroke-width="2"/></svg>
+                    {{ ligne.emplacementCodeComplet }}
+                  </div>
+                </div>
                 <button class="btn btn-danger btn-sm" style="height:36px;align-self:flex-end;" @click.prevent="supprimerLigne(index)">Supprimer</button>
               </div>
             </div>
@@ -113,17 +156,24 @@
 
 <script>
 import { sortieApi, entrepotApi, produitApi } from '../services/api.js'
+import { authStore } from '../services/authStore.js'
+import ConfirmModal from '../components/ConfirmModal.vue'
 
 export default {
   name: 'BonSortiesPage',
+  components: { ConfirmModal },
   data() {
     return {
       liste: [], entrepots: [], produits: [], recherche: '', chargement: true,
       modal: false, erreur: '',
-      form: { id: null, entrepotId: '', destination: '', commentaire: '', lignes: [] }
+      form: { id: null, entrepotId: '', destination: '', commentaire: '', lignes: [] },
+      confirm: { visible: false, cible: null },
+      toast: { visible: false, message: '', duree: 10000, _timer: null }
     }
   },
   computed: {
+    peutEcrire()    { return authStore.aUnRole('ADMIN', 'GESTIONNAIRE', 'MAGASINIER') },
+    peutSupprimer() { return authStore.aUnRole('ADMIN', 'GESTIONNAIRE') },
     listeFiltree() {
       const q = this.recherche.toLowerCase()
       if (!q) return this.liste
@@ -138,7 +188,19 @@ export default {
   async mounted() {
     await Promise.all([this.charger(), this.chargerDonnees()])
   },
+  beforeUnmount() {
+    clearTimeout(this.toast._timer)
+  },
   methods: {
+    afficherToast(message, duree = 10000) {
+      clearTimeout(this.toast._timer)
+      this.toast = { visible: true, message, duree, _timer: null }
+      this.toast._timer = setTimeout(() => { this.toast.visible = false }, duree)
+    },
+    fermerToast() {
+      clearTimeout(this.toast._timer)
+      this.toast.visible = false
+    },
     async charger() {
       this.chargement = true
       try { const res = await sortieApi.findAll(); this.liste = res.data } finally { this.chargement = false }
@@ -151,7 +213,17 @@ export default {
     ouvrirModal(b = null) {
       this.erreur = ''
       if (b) {
-        this.form = { ...b, lignes: b.lignes.map(l => ({ ...l })) }
+        this.form = {
+          id:          b.id,
+          entrepotId:  b.entrepotId,
+          destination: b.destination,
+          commentaire: b.commentaire || '',
+          lignes: (b.lignes || []).map(l => ({
+            produitId:             l.produitId,
+            quantite:              l.quantite,
+            emplacementCodeComplet: l.emplacementCodeComplet || null  // lecture seule, affiché seulement
+          }))
+        }
       } else {
         this.form = { id: null, entrepotId: '', destination: '', commentaire: '', lignes: [] }
       }
@@ -172,8 +244,16 @@ export default {
         if (this.form.lignes.some(l => !l.produitId || l.quantite < 1)) {
           throw new Error('Chaque ligne doit contenir un produit et une quantité valide.')
         }
-        if (this.form.id) await sortieApi.modifier(this.form.id, this.form)
-        else await sortieApi.creer(this.form)
+        if (this.form.id) await sortieApi.modifier(this.form.id, {
+            entrepotId: this.form.entrepotId, destination: this.form.destination,
+            commentaire: this.form.commentaire || '',
+            lignes: this.form.lignes.map(l => ({ produitId: l.produitId, quantite: l.quantite }))
+          })
+        else await sortieApi.creer({
+            entrepotId: this.form.entrepotId, destination: this.form.destination,
+            commentaire: this.form.commentaire || '',
+            lignes: this.form.lignes.map(l => ({ produitId: l.produitId, quantite: l.quantite }))
+          })
         this.modal = false
         await this.charger()
       } catch (e) {
@@ -185,20 +265,27 @@ export default {
         await sortieApi.valider(bon.id)
         await this.charger()
       } catch (e) {
-        alert(e.response?.data?.message || 'Impossible de valider le bon.')
+        const msg = e.response?.data?.message || 'Impossible de valider le bon.'
+        this.afficherToast(msg)
       }
     },
-    async supprimer(bon) {
-      if (!confirm('Supprimer ce bon de sortie en brouillon ?')) return
+    demanderSuppression(bon) {
+      this.confirm = { visible: true, cible: bon }
+    },
+    async confirmerSuppression() {
       try {
-        await sortieApi.supprimer(bon.id)
+        await sortieApi.supprimer(this.confirm.cible.id)
+        this.confirm = { visible: false, cible: null }
         await this.charger()
       } catch (e) {
-        alert(e.response?.data?.message || 'Impossible de supprimer le bon.')
+        this.confirm = { visible: false, cible: null }
+        this.afficherToast(e.response?.data?.message || 'Impossible de supprimer le bon.')
       }
     },
     formaterDate(date) {
-      return new Date(date).toLocaleString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric' })
+      if (!date) return '—'
+      const d = new Date(date)
+      return isNaN(d) ? '—' : d.toLocaleString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric' })
     }
   }
 }
@@ -212,4 +299,52 @@ export default {
 .line-row { margin-bottom: 14px; padding-bottom: 14px; border-bottom: 1px solid var(--gray-200); }
 .line-row:last-child { margin-bottom: 0; border-bottom: none; }
 .align-end { align-items: flex-end; }
+.emp-info-badge {
+  display: flex; align-items: center; gap: 5px;
+  background: #f0fdf4; border: 1px solid #86efac;
+  color: #15803d; border-radius: 6px;
+  padding: 7px 10px; font-size: .78rem; font-family: monospace; font-weight: 600;
+}
+
+  /* ── Toast erreur ── */
+  .toast-error {
+    position: fixed;
+    top: 24px;
+    right: 24px;
+    z-index: 9999;
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    background: #fff;
+    border: 1px solid #fca5a5;
+    border-left: 4px solid var(--danger);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow-lg);
+    padding: 16px 14px 12px 16px;
+    max-width: 420px;
+    min-width: 300px;
+  }
+  .toast-icon { color: var(--danger); flex-shrink: 0; margin-top: 1px; }
+  .toast-body { flex: 1; min-width: 0; }
+  .toast-title { font-weight: 700; font-size: .88rem; color: var(--danger); margin-bottom: 3px; }
+  .toast-message { font-size: .83rem; color: var(--gray-700); line-height: 1.4; }
+  .toast-close {
+    background: none; border: none; cursor: pointer;
+    color: var(--gray-400); padding: 2px; flex-shrink: 0;
+    border-radius: 4px; display:flex; align-items:center;
+  }
+  .toast-close:hover { color: var(--gray-700); background: var(--gray-100); }
+  .toast-progress { margin-top: 8px; height: 3px; background: var(--danger-bg); border-radius: 999px; overflow: hidden; }
+  .toast-progress-bar {
+    height: 100%;
+    background: var(--danger);
+    border-radius: 999px;
+    width: 100%;
+    animation: toast-drain linear forwards;
+  }
+  @keyframes toast-drain { from { width: 100%; } to { width: 0%; } }
+  .toast-slide-enter-active { transition: all .25s ease; }
+  .toast-slide-leave-active { transition: all .2s ease; }
+  .toast-slide-enter-from { opacity: 0; transform: translateX(40px); }
+  .toast-slide-leave-to   { opacity: 0; transform: translateX(40px); }
 </style>

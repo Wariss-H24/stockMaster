@@ -19,6 +19,7 @@ public class DataLoader {
             UtilisateurRepository userRepo,
             EntrepotRepository entrepotRepo,
             ZoneFrRepository zoneRepo,
+            CategorieRepository categorieRepo,
             ProduitRepository produitRepo,
             PasswordEncoder passwordEncoder) {
 
@@ -87,20 +88,40 @@ public class DataLoader {
                 }
             }
 
+            // --- Catégories de démonstration ---
+            if (categorieRepo.count() == 0) {
+                for (String[] data : new String[][]{
+                        {"Informatique",   "Matériel et accessoires informatiques"},
+                        {"Électroménager", "Appareils électroménagers"},
+                        {"Pièces auto",    "Pièces et accessoires automobiles"},
+                        {"Alimentaire",    "Produits alimentaires"},
+                }) {
+                    Categorie c = new Categorie();
+                    c.setNom(data[0]);
+                    c.setDescription(data[1]);
+                    c.setActif(true);
+                    categorieRepo.save(c);
+                }
+            }
+
             // --- Produits de démonstration ---
             if (produitRepo.count() == 0) {
+                Categorie catInfo    = categorieRepo.findAll().stream().filter(c -> c.getNom().equals("Informatique")).findFirst().orElse(null);
+                Categorie catElec    = categorieRepo.findAll().stream().filter(c -> c.getNom().equals("Électroménager")).findFirst().orElse(null);
+                Categorie catAuto    = categorieRepo.findAll().stream().filter(c -> c.getNom().equals("Pièces auto")).findFirst().orElse(null);
+
                 Object[][] produits = {
-                    {"PRD-001", "1234567890123", "Laptop Dell XPS",       "Informatique",   800.0, 1200.0, 2.1,  0.003},
-                    {"PRD-002", "9876543210987", "Clavier mécanique",     "Informatique",    60.0,   95.0, 0.9,  0.001},
-                    {"PRD-003", "1111222233334", "Réfrigérateur Samsung", "Electroménager", 350.0,  550.0, 45.0, 0.5},
-                    {"PRD-004", "5555666677778", "Filtre à huile VW",     "Pièces auto",      8.0,   18.0, 0.3,  0.0002},
+                    {"PRD-001", "1234567890123", "Laptop Dell XPS",       catInfo,  800.0, 1200.0, 2.1,  0.003},
+                    {"PRD-002", "9876543210987", "Clavier mécanique",     catInfo,   60.0,   95.0, 0.9,  0.001},
+                    {"PRD-003", "1111222233334", "Réfrigérateur Samsung", catElec,  350.0,  550.0, 45.0, 0.5  },
+                    {"PRD-004", "5555666677778", "Filtre à huile VW",     catAuto,    8.0,   18.0, 0.3,  0.0002},
                 };
                 for (Object[] d : produits) {
                     Produit p = new Produit();
                     p.setReference((String) d[0]);
                     p.setCodeBarre((String) d[1]);
                     p.setNom((String) d[2]);
-                    p.setCategorie((String) d[3]);
+                    p.setCategorie((Categorie) d[3]);
                     p.setPrixAchat((Double) d[4]);
                     p.setPrixVente((Double) d[5]);
                     p.setPoids((Double) d[6]);

@@ -124,37 +124,22 @@ export default {
       this.erreur = ''
       this.chargement = true
 
-      // --- LOGS DE DÉBOGAGE ---
       const payload = this.mode === 'login'
         ? { username: this.form.username.trim(), motDePasse: this.form.motDePasse }
         : { username: this.form.username.trim(), motDePasse: this.form.motDePasse, nomComplet: this.form.nomComplet.trim() }
 
-      console.log('[AUTH] Mode:', this.mode)
-      console.log('[AUTH] Payload envoyé:', JSON.stringify(payload))
-      console.log('[AUTH] username vide?', !payload.username)
-      console.log('[AUTH] motDePasse vide?', !payload.motDePasse)
-      console.log('[AUTH] motDePasse longueur:', payload.motDePasse?.length)
-
       try {
-        const endpoint = this.mode === 'login' ? '/auth/login' : '/auth/register'
-        console.log('[AUTH] Appel vers:', endpoint)
-
         const res = await authApi[this.mode === 'login' ? 'login' : 'register'](payload)
-
-        console.log('[AUTH] Réponse status:', res.status)
-        console.log('[AUTH] Réponse data:', JSON.stringify(res.data))
-
         authStore.login(res.data.token, {
           username: res.data.username,
           nomComplet: res.data.nomComplet,
           roles: Array.isArray(res.data.roles) ? res.data.roles : Array.from(res.data.roles || [])
         })
-        this.$router.push('/tableau-de-bord')
+        // Rediriger vers la page initiale si un QR a été scanné
+        const redirect = sessionStorage.getItem('sm_redirect_after_login')
+        sessionStorage.removeItem('sm_redirect_after_login')
+        this.$router.push(redirect || '/tableau-de-bord')
       } catch (e) {
-        console.error('[AUTH] Erreur status:', e.response?.status)
-        console.error('[AUTH] Erreur data:', JSON.stringify(e.response?.data))
-        console.error('[AUTH] Erreur complète:', e.message)
-
         const data = e.response?.data
         if (data?.erreurs) {
           this.erreur = Object.values(data.erreurs).join(' — ')

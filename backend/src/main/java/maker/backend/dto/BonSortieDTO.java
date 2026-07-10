@@ -17,6 +17,11 @@ public class BonSortieDTO {
     private Long entrepotId;
     private String entrepotNom;
 
+    // Emplacement de sortie (indique au magasinier où aller chercher)
+    private Long zoneId;
+    private String zoneNom;
+    private String emplacementCodeComplet; // ex: ENT-001/ZONE-A/RAYON-03/ETAGERE-02/EMP-12
+
     @NotBlank(message = "La destination est obligatoire")
     private String destination;
 
