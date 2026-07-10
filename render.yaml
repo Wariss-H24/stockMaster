@@ -1,15 +1,13 @@
 services:
+  # ── Backend Spring Boot via Docker ────────────────────────────────────────
   - type: web
     name: stockmaster-backend
-    runtime: java
+    runtime: docker
     region: frankfurt
     plan: free
     rootDir: backend
-    buildCommand: chmod +x mvnw && ./mvnw clean package -DskipTests
-    startCommand: java -Dspring.profiles.active=prod -jar target/backend-0.0.1-SNAPSHOT.jar
+    dockerfilePath: ./Dockerfile
     envVars:
-      - key: JAVA_VERSION
-        value: "21"
       - key: JWT_SECRET
         generateValue: true
       - key: FRONTEND_URL
@@ -20,6 +18,7 @@ services:
           property: connectionString
 
 databases:
+  # ── PostgreSQL gratuit Render ──────────────────────────────────────────────
   - name: stockmaster-db
     databaseName: stockmaster
     user: stockmaster
